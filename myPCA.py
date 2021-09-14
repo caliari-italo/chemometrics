@@ -5,78 +5,85 @@ Created on Sat Sep 11 10:35:49 2021
 PCA Routine
 @author: caliariitalo
 """
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from sklearn.decomposition import PCA
+def runPCA(X, prep='mncn'):
+    "runPCA(X)"
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from sklearn.decomposition import PCA
+    from sklearn import preprocessing
 
-data = pd.read_csv("peach_spectra_brix.csv")
-Xraw = data.iloc[:, 1::]
-index = np.arange(0, len(Xraw)-1)
+    if prep == 'mncn': X = preprocessing.scale(X, with_mean='True', with_std='False')
+    if prep == 'auto': X = preprocessing.scale(X, with_mean='True', with_std='True')
 
-# fig = plt.figure(figsize = (10,10))
-# dataplot = fig.add_subplot(1,1,1) 
-# dataplot.plot(Xraw.T)
-# dataplot.set_title('Raw Data', fontsize = 15)
-# dataplot.set_xlabel('Abscissa Axys', fontsize = 10)
-# dataplot.set_ylabel('Ordinate Axys', fontsize = 10)
+    index = np.arange(0, len(X)-1)
+    max_components = 10
 
-#Preprocessing
-X = Xraw - Xraw.mean()
+    pca = PCA(max_components)
+    pca.fit(X)
 
-# fig = plt.figure(figsize = (10,10))
-# dataplot = fig.add_subplot(1,1,1) 
-# dataplot.plot(X.T)
-# dataplot.set_title('Transformed Data', fontsize = 15)
-# dataplot.set_xlabel('Abscissa Axys', fontsize = 10)
-# dataplot.set_ylabel('Ordinate Axys', fontsize = 10)
+    fig1 = plt.figure(figsize = (5,5), dpi=300)
+    pcplot = fig1.add_subplot(1,1,1) 
+    pcplot.plot(np.arange(1, max_components+1), 
+                pca.explained_variance_ratio_*100,
+                label = 'Captured variance (Individual)')
+    pcplot.plot(np.arange(1, max_components+1),
+                [sum(pca.explained_variance_ratio_[0:temp+1]*100) 
+                 for temp in range(max_components)],
+                label = 'Captured variance (Total)')
+    pcplot.set_xlabel('PCs', fontsize = 10)
+    pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
+    pcplot.legend()
 
-max_components = 10
 
-pca = PCA(max_components)
-pca.fit(X)
+    scores = pca.fit_transform(X)
+    loadings = pca.components_
 
-fig = plt.figure(figsize = (5,5))
-pcplot = fig.add_subplot(1,1,1) 
-pcplot.plot(np.arange(1, max_components+1), 
-            pca.explained_variance_ratio_*100,
-            label = 'Captured variance (Individual)')
-pcplot.plot(np.arange(1, max_components+1),
-            [sum(pca.explained_variance_ratio_[0:temp+1]*100) 
-             for temp in range(max_components)],
-            label = 'Captured variance (Total)')
-pcplot.set_xlabel('PCs', fontsize = 10)
-pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
-pcplot.legend()
+    n_components = 3
 
-n_components = 3
+    euclidean = np.zeros(X.shape[0])
+    for i in range(n_components):
+        euclidean += (scores[:,i] - np.mean(scores[:,:n_components]))**2/np.var(scores[:,:n_components])
+    colors = [plt.cm.jet(float(i)/max(euclidean)) for i in euclidean]
 
-pca = PCA(n_components)
-pca.fit(X)
-scores = pca.fit_transform(X)
+    fig2 = plt.figure(figsize = (12, 6), dpi=300)
+    scoresplot1 = fig2.add_subplot(1,2,1) 
+    scoresplot1.scatter(scores[:, 0], scores[:, 1], c=colors, edgecolors='k', s=60)
+    scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)',
+                         fontsize = 10)
+    scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
+                         fontsize = 10)
+    scoresplot1.set_xlim(min(min(scores[:, 0]), min(scores[:, 1])),
+                       max(max(scores[:, 0]), max(scores[:, 1])))
+    scoresplot1.set_ylim(min(min(scores[:, 0]), min(scores[:, 1])),
+                       max(max(scores[:, 0]), max(scores[:, 1])))
+    for xi, yi, indexi in zip(scores[:, 0], scores[:, 1], index):
+        scoresplot1.annotate(str(indexi), xy = (xi, yi))
 
-fig = plt.figure(figsize = (10,5))
-scoreplot = fig.add_subplot(1,2,1) 
-scoreplot.scatter(scores[:, 0], scores[:, 1])
-scoreplot.set_xlabel('PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)',
-                     fontsize = 10)
-scoreplot.set_ylabel('PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
-                     fontsize = 10)
-for xi, yi, indexi in zip(scores[:, 0], scores[:, 1], index):
-    scoreplot.annotate(str(indexi), xy = (xi, yi))
+    loadingsplot1 = fig2.add_subplot(1,2,2) 
+    loadingsplot1.plot(loadings[0,:], label='Loadings PC1')
+    loadingsplot1.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot1.set_xlabel('Variables')
+    loadingsplot1.set_ylabel('Loadings')
+    loadingsplot1.legend()
     
-loadings = pca.components_
-    
-Xrec = pd.DataFrame(np.matmul(scores[:, 0:n_components-1], loadings[0:n_components-1, :]),
-                   columns = X.columns) + Xraw.mean()
+    fig3 = plt.figure(figsize = (12,6), dpi=300)
+    scoresplot2 = fig3.add_subplot(1,2,1)
+    scoresplot2.scatter(scores[:, 1], scores[:, 2], c=colors, edgecolors='k', s=60)
+    scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
+                         fontsize = 10)
+    scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)',  
+                         fontsize = 10)
+    scoresplot2.set_xlim(min(min(scores[:, 1]), min(scores[:, 2])),
+                       max(max(scores[:, 1]), max(scores[:, 2])))
+    scoresplot2.set_ylim(min(min(scores[:, 1]), min(scores[:, 2])),
+                       max(max(scores[:, 1]), max(scores[:, 2])))
+    for xi, yi, indexi in zip(scores[:, 1], scores[:, 2], index):
+        scoresplot2.annotate(str(indexi), xy = (xi, yi))
 
-scoreplot = fig.add_subplot(1,2,2) 
-scoreplot.scatter(scores[:, 1], scores[:, 2])
-scoreplot.set_xlabel('PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
-                     fontsize = 10)
-scoreplot.set_ylabel('PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)',  
-                     fontsize = 10)
-for xi, yi, indexi in zip(scores[:, 1], scores[:, 2], index):
-    scoreplot.annotate(str(indexi), xy = (xi, yi))    
-    
-del(xi, yi, indexi, fig, index, max_components)
+    loadingsplot2 = fig3.add_subplot(1,2,2) 
+    loadingsplot2.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
+    loadingsplot2.set_xlabel('Variables') 
+    loadingsplot2.set_ylabel('Loadings')
+    loadingsplot2.legend()
