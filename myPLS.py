@@ -1,6 +1,6 @@
 def runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=10, plot='off'):
     "output = runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=10, plot='off')"
-    
+
     import pandas as pd
     import math
     import matplotlib.pyplot as plt
@@ -11,9 +11,9 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=10, plot='off'):
     pls = PLSRegression(n_components)
     pls.fit(X_train, Y_train)
     Y_train_predicted = pls.predict(X_train)
-    Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train)
+    Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train, cv)
     Y_test_predicted = pls.predict(X_test)
-    RMSE = math.sqrt(mean_squared_error(Y_train, Y_train_predicted))
+    RMSEC = math.sqrt(mean_squared_error(Y_train, Y_train_predicted))
     RMSECV = math.sqrt(mean_squared_error(Y_train, Y_train_predicted_CV))
     RMSEP = math.sqrt(mean_squared_error(Y_test, Y_test_predicted))
     R2 = r2_score(Y_train, Y_train_predicted)
@@ -45,9 +45,9 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=10, plot='off'):
                          max(Y_test_predicted)))
         mxp.legend()
 
-    output = pd.DataFrame([n_components, RMSE, R2, RMSECV, R2CV, RMSEP, R2P], 
-                          index=['Components', 'RMSE', 'R2', 'RMSECV', 'R2CV', 'RMSEP', 'R2P']
-                          ).T.set_index('Components')
+    output = pd.DataFrame([n_components, RMSEC, R2, RMSECV, R2CV, RMSEP, R2P], 
+                          index=['Components', 'RMSEC', 'R2', 'RMSECV', 'R2CV', 'RMSEP', 'R2P']
+                          ).T#.set_index('Components')
     
     return output
 
@@ -67,8 +67,8 @@ def optPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off'):
         fig = plt.figure(figsize = (5,5), dpi=300)
         RMSEplot = fig.add_subplot(1,1,1) 
         RMSEplot.plot(np.arange(1, max_components+1),
-                      output.RMSE,
-                      label = 'RMSE')
+                      output.RMSEC,
+                      label = 'RMSEC')
         RMSEplot.plot(np.arange(1, max_components+1),
                       output.RMSECV,
                       label = 'RMSECV')
@@ -110,4 +110,45 @@ def autoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off')
     
     bestoutput = runPLS(X_train, Y_train, X_test, Y_test, n_components, cv, plot)
     
+    return bestoutput
+
+def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off'):
+    "bestoutput = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off')"
+    from scipy.signal import savgol_filter
+
+    X_train_sg = savgol_filter(X_train, window_length, polyorder, deriv)
+    X_test_sg = savgol_filter(X_test, window_length, polyorder, deriv)
+    bestoutput = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test, max_components, cv, plot)
+
+    return bestoutput
+
+def sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10):
+    "bestoutput = sgPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10)"
+    import pandas as pd
+    #from scipy.signal import savgol_filter
+    
+    sg = pd.DataFrame()
+    output = pd.DataFrame()
+    bestoutput = pd.DataFrame()
+    run = 0
+    
+    for window_length in range(5, int(len(X_test.T)*.15), 2):
+        for deriv in range(0, 3):
+            for polyorder in range(deriv, 3):
+                run = run + 1
+                sg = sg.append((pd.DataFrame([run, window_length, polyorder, deriv],
+                                             index=['Run','Window', 'PolyOrder', 'Deriv']))
+                               .T)
+                #X_train_sg = savgol_filter(X_train, window_length, polyorder, deriv)
+                #X_test_sg = savgol_filter(X_test, window_length, polyorder, deriv)
+                #output = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test, 15, cv=10, plot='off')
+                
+                output = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv, plot='off')
+                output['Run'] = run
+                bestoutput = bestoutput.append(output)
+    
+    sg = sg.set_index('Run')
+    bestoutput = bestoutput.set_index('Run')
+    bestoutput = bestoutput.join(sg)
+
     return bestoutput
