@@ -11,7 +11,7 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=10, plot='off'):
     pls = PLSRegression(n_components)
     pls.fit(X_train, Y_train)
     Y_train_predicted = pls.predict(X_train)
-    Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train, cv)
+    Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train, cv=cv)
     Y_test_predicted = pls.predict(X_test)
     RMSEC = math.sqrt(mean_squared_error(Y_train, Y_train_predicted))
     RMSECV = math.sqrt(mean_squared_error(Y_train, Y_train_predicted_CV))
@@ -61,7 +61,7 @@ def optPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off'):
     output = pd.DataFrame()
 
     for n_components in range(1, max_components+1):
-        output = output.append(runPLS(X_train, Y_train, X_test, Y_test, n_components, cv, plot='off'))
+        output = output.append(runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=cv, plot='off'))
 
     if plot == 'on':
         fig = plt.figure(figsize = (5,5), dpi=300)
@@ -101,24 +101,25 @@ def autoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off')
 
     import numpy as np
 
-    output = optPLS(X_train, Y_train, X_test, Y_test, max_components, cv, plot)
+    output = optPLS(X_train, Y_train, X_test, Y_test, max_components, cv=cv, plot=plot)
 
     diff = np.diff(output.RMSECV)
 
     for n_components in range(1,len(diff)+1):
-        if diff[n_components-1]/output.RMSECV.iloc[n_components-1] > -0.1: break
+        if diff[n_components-1]/output.RMSECV.iloc[n_components-1] > -0.05: break
 
-    bestoutput = runPLS(X_train, Y_train, X_test, Y_test, n_components, cv, plot)
+    bestoutput = runPLS(X_train, Y_train, X_test, Y_test, n_components, cv=cv, plot=plot)
 
     return bestoutput
 
 def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off'):
     "bestoutput = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off')"
+
     from scipy.signal import savgol_filter
 
     X_train_sg = savgol_filter(X_train, window_length, polyorder, deriv)
     X_test_sg = savgol_filter(X_test, window_length, polyorder, deriv)
-    bestoutput = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test, max_components, cv, plot)
+    bestoutput = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test, max_components, cv=cv, plot=plot)
 
     return bestoutput
 
@@ -139,7 +140,7 @@ def sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10):
                 sg = sg.append((pd.DataFrame([run, window_length, polyorder, deriv],
                                              index=['Run','Window', 'PolyOrder', 'Deriv']))
                                .T)
-                output = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv, plot='off')
+                output = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=cv, plot='off')
                 output['Run'] = run
                 bestoutput = bestoutput.append(output)
 
