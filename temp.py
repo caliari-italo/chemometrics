@@ -13,9 +13,11 @@ from sklearn.datasets import load_boston
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from myPCA import *
+from myPLS import *
+
 from sklearn import preprocessing
 
-X = pd.read_csv('plums.csv').values[:,1:]
+#X = pd.read_csv('plums.csv').values[:,1:]
 
 # #Xraw, Yraw = load_boston(return_X_y=True)
 # # Get reference values
@@ -24,10 +26,9 @@ X = pd.read_csv('plums.csv').values[:,1:]
 # Xraw = data.drop(['Brix'], axis=1).values
 # # Get wavelengths
 # wl = np.arange(1100,2300,2)
+# X = X - X.mean(0)
+# Y = Y - Y.mean(0)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y)
 
-#X_train, X_test, Y_train, Y_test = train_test_split(Xraw, Yraw)
-
-#bestoutput = sgautoPLS(X_train, Y_train, X_test, Y_test, 5, cv=10)
-
-X = np.log(1.0/X)
-wl = np.arange(1100,2300,2)
+#runPCA(X)
+bestoutput = sgautoPLS(X_train, Y_train, X_test, Y_test, 10, prep='mncn')

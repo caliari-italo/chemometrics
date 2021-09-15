@@ -6,10 +6,9 @@ PCA Routine
 @author: caliariitalo
 """
 def runPCA(X, prep='mncn'):
-    "runPCA(X)"
+    "runPCA(X, prep='mncn')"
     import matplotlib.pyplot as plt
     import numpy as np
-    import pandas as pd
     from sklearn.decomposition import PCA
     from sklearn import preprocessing
 
@@ -34,7 +33,6 @@ def runPCA(X, prep='mncn'):
     pcplot.set_xlabel('PCs', fontsize = 10)
     pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
     pcplot.legend()
-
 
     scores = pca.fit_transform(X)
     loadings = pca.components_
