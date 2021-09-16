@@ -10,11 +10,11 @@ def splisamples(X, Y, TestSplit=0.25):
 
     X = pd.DataFrame(X)
     Y = pd.DataFrame(Y)
-   
+
     index = pd.DataFrame(index=Y.sort_values(0).index)
     indextrain = pd.DataFrame()
     indextest = index
-   
+
     X_train = X
     Y_train = Y
     X_test = pd.DataFrame()
@@ -136,11 +136,6 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, p
     if prep == 'mncn':
         X_train = X_train - X_train.mean(0)
         X_test = X_test - X_test.mean(0)
-#        Y_train = Y_train - Y_train.mean(0)
-#        Y_test = Y_test - Y_test.mean(0)
-#    if prep == 'auto':
-#        X_train = preprocessing.scale(X_train, with_mean='True', with_std='True')
-#        X_test = (X_test - X_train.mean(0))/X_train.std(0)
 
     pls = PLSRegression(n_components)
     pls.fit(X_train, Y_train)
@@ -246,6 +241,8 @@ def autoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=10
     bestoutput = runPLS(X_train, Y_train, X_test, Y_test,
                         n_components, prep=prep, cv=cv, plot=plot)
 
+    bestoutput = bestoutput.sort_values(by=['RMSECV'])
+
     return bestoutput
 
 def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, prep='mncn', cv=10, plot='off'):
@@ -258,6 +255,8 @@ def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyo
 
     bestoutput = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test,
                          max_components, prep=prep, cv=cv, plot=plot)
+
+    bestoutput = bestoutput.sort_values(by=['RMSECV'])
 
     return bestoutput
 
@@ -289,5 +288,7 @@ def sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=
     sg = sg.set_index('Run')
     bestoutput = bestoutput.set_index('Run')
     bestoutput = bestoutput.join(sg)
+
+    bestoutput = bestoutput.sort_values(by=['RMSECV'])
 
     return bestoutput
