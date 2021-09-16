@@ -6,6 +6,7 @@ Usefull Chemometrics routines
 """
 def splisamples(X, Y, TestSplit=0.25):
     "[X_train, Y_train, X_test, Y_test] = splisamples(X, y, TestSplit=0.25)"
+
     import pandas as pd
 
     X = pd.DataFrame(X)
@@ -42,8 +43,9 @@ def splisamples(X, Y, TestSplit=0.25):
 
     return [X_train, Y_train, X_test, Y_test]
 
-def runPCA(X, prep='mncn'):
-    "runPCA(X, prep='mncn')"
+def runPCA(X, prep='none'):
+    "runPCA(X, prep='none')"
+
     import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.decomposition import PCA
@@ -60,6 +62,8 @@ def runPCA(X, prep='mncn'):
 
     fig1 = plt.figure(figsize = (5,5), dpi=300)
     pcplot = fig1.add_subplot(1,1,1) 
+    pcplot.set_xlabel('PCs', fontsize = 10)
+    pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
     pcplot.plot(np.arange(1, max_components+1), 
                 pca.explained_variance_ratio_*100,
                 label = 'Captured variance (Individual)')
@@ -67,11 +71,9 @@ def runPCA(X, prep='mncn'):
                 [sum(pca.explained_variance_ratio_[0:temp+1]*100) 
                  for temp in range(max_components)],
                 label = 'Captured variance (Total)')
-    pcplot.set_xlabel('PCs', fontsize = 10)
-    pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
     pcplot.legend()
 
-    scores = pca.fit_transform(X)
+    scores = pca.transform(X)
     loadings = pca.components_
 
     n_components = 3
@@ -83,7 +85,6 @@ def runPCA(X, prep='mncn'):
 
     fig2 = plt.figure(figsize = (12, 6), dpi=300)
     scoresplot1 = fig2.add_subplot(1,2,1) 
-    scoresplot1.scatter(scores[:, 0], scores[:, 1], c=colors, edgecolors='k', s=60)
     scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)',
                          fontsize = 10)
     scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
@@ -92,19 +93,19 @@ def runPCA(X, prep='mncn'):
                        max(max(scores[:, 0]), max(scores[:, 1])))
     scoresplot1.set_ylim(min(min(scores[:, 0]), min(scores[:, 1])),
                        max(max(scores[:, 0]), max(scores[:, 1])))
+    scoresplot1.scatter(scores[:, 0], scores[:, 1], c=colors, edgecolors='k', s=60)
     for xi, yi, indexi in zip(scores[:, 0], scores[:, 1], index):
         scoresplot1.annotate(str(indexi), xy = (xi, yi))
 
-    loadingsplot1 = fig2.add_subplot(1,2,2) 
-    loadingsplot1.plot(loadings[0,:], label='Loadings PC1')
-    loadingsplot1.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot1 = fig2.add_subplot(1,2,2)
     loadingsplot1.set_xlabel('Variables')
     loadingsplot1.set_ylabel('Loadings')
+    loadingsplot1.plot(loadings[0,:], label='Loadings PC1')
+    loadingsplot1.plot(loadings[1,:], label='Loadings PC2')
     loadingsplot1.legend()
     
     fig3 = plt.figure(figsize = (12,6), dpi=300)
     scoresplot2 = fig3.add_subplot(1,2,1)
-    scoresplot2.scatter(scores[:, 1], scores[:, 2], c=colors, edgecolors='k', s=60)
     scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
                          fontsize = 10)
     scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)',  
@@ -113,16 +114,110 @@ def runPCA(X, prep='mncn'):
                        max(max(scores[:, 1]), max(scores[:, 2])))
     scoresplot2.set_ylim(min(min(scores[:, 1]), min(scores[:, 2])),
                        max(max(scores[:, 1]), max(scores[:, 2])))
+    scoresplot2.scatter(scores[:, 1], scores[:, 2], c=colors, edgecolors='k', s=60)
     for xi, yi, indexi in zip(scores[:, 1], scores[:, 2], index):
         scoresplot2.annotate(str(indexi), xy = (xi, yi))
 
     loadingsplot2 = fig3.add_subplot(1,2,2) 
-    loadingsplot2.plot(loadings[1,:], label='Loadings PC2')
-    loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
     loadingsplot2.set_xlabel('Variables') 
     loadingsplot2.set_ylabel('Loadings')
+    loadingsplot2.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
     loadingsplot2.legend()
+
+def runPCA2(X1, X2, prep='none'):
+    "runPCA2(X, X2, prep='none')"
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from sklearn.decomposition import PCA
+    from sklearn import preprocessing
+
+    if prep == 'mncn': X1 = preprocessing.scale(X1, with_mean='True', with_std='False')
+    if prep == 'auto': X1 = preprocessing.scale(X1, with_mean='True', with_std='True')
+
+    index1 = np.arange(0, len(X1)-1)
+    index2 = np.arange(0, len(X2)-1)
+
+    max_components = 10
+
+    pca = PCA(max_components)
+    pca.fit(X1)
+
+    fig1 = plt.figure(figsize = (5,5), dpi=300)
+    pcplot = fig1.add_subplot(1,1,1) 
+    pcplot.set_xlabel('PCs', fontsize = 10)
+    pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
+    pcplot.plot(np.arange(1, max_components+1), 
+                pca.explained_variance_ratio_*100,
+                label = 'Captured variance (Individual)')
+    pcplot.plot(np.arange(1, max_components+1),
+                [sum(pca.explained_variance_ratio_[0:temp+1]*100) 
+                 for temp in range(max_components)],
+                label = 'Captured variance (Total)')
+    pcplot.legend()
+
+    scores1 = pca.transform(X1)
+    scores2 = pca.transform(X2)
+    loadings = pca.components_
+
+    fig2 = plt.figure(figsize = (12, 6), dpi=300)
+    scoresplot1 = fig2.add_subplot(1,2,1)
+    scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)',
+                         fontsize = 10)
+    scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
+                         fontsize = 10)
+    scoresplot1.set_xlim(min(min(scores1[:, 0]), min(scores1[:, 1]),
+                             min(scores2[:, 0]), min(scores2[:, 1])),
+                         max(max(scores1[:, 0]), max(scores1[:, 1]),
+                             max(scores2[:, 0]), max(scores2[:, 1])))
+    scoresplot1.set_ylim(min(min(scores1[:, 0]), min(scores1[:, 1]),
+                             min(scores2[:, 0]), min(scores2[:, 1])),
+                         max(max(scores1[:, 0]), max(scores1[:, 1]),
+                             max(scores2[:, 0]), max(scores2[:, 1])))
+    scoresplot1.scatter(scores1[:, 0], scores1[:, 1])
+    for xi, yi, indexi in zip(scores1[:, 0], scores1[:, 1], index1):
+        scoresplot1.annotate(str(indexi), xy = (xi, yi))
+    scoresplot1.scatter(scores2[:, 0], scores2[:, 1])
+    for xi, yi, indexi in zip(scores2[:, 0], scores2[:, 1], index2):
+        scoresplot1.annotate(str(indexi), xy = (xi, yi))
+
+    loadingsplot1 = fig2.add_subplot(1,2,2)
+    loadingsplot1.set_xlabel('Variables')
+    loadingsplot1.set_ylabel('Loadings')
+    loadingsplot1.plot(loadings[0,:], label='Loadings PC1')
+    loadingsplot1.plot(loadings[1,:], label='Loadings PC2')
+
+    loadingsplot1.legend()
     
+    fig3 = plt.figure(figsize = (12,6), dpi=300)
+    scoresplot2 = fig3.add_subplot(1,2,1)
+    scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
+                         fontsize = 10)
+    scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)',  
+                         fontsize = 10)
+    scoresplot2.set_xlim(min(min(scores1[:, 1]), min(scores1[:, 2]),
+                             min(scores2[:, 1]), min(scores2[:, 2])),
+                         max(max(scores1[:, 1]), max(scores1[:, 2]),
+                             max(scores2[:, 1]), max(scores2[:, 2])))
+    scoresplot2.set_ylim(min(min(scores1[:, 1]), min(scores1[:, 2]),
+                             min(scores2[:, 1]), min(scores2[:, 2])),
+                         max(max(scores1[:, 1]), max(scores1[:, 2]),
+                             max(scores2[:, 1]), max(scores2[:, 2])))
+    scoresplot2.scatter(scores1[:, 1], scores1[:, 2])
+    for xi, yi, indexi in zip(scores1[:, 1], scores1[:, 2], index1):
+        scoresplot2.annotate(str(indexi), xy = (xi, yi))
+    scoresplot2.scatter(scores2[:, 1], scores2[:, 2])
+    for xi, yi, indexi in zip(scores2[:, 1], scores2[:, 2], index2):
+        scoresplot2.annotate(str(indexi), xy = (xi, yi))
+
+    loadingsplot2 = fig3.add_subplot(1,2,2)
+    loadingsplot2.set_xlabel('Variables')
+    loadingsplot2.set_ylabel('Loadings')
+    loadingsplot2.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
+    loadingsplot2.legend()
+
 def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, plot='off'):
     "output = runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, plot='off')"
 
