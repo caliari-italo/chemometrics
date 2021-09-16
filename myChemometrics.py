@@ -218,10 +218,11 @@ def runPCA2(X1, X2, prep='none'):
     loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
     loadingsplot2.legend()
 
-def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, plot='off'):
-    "output = runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, plot='off')"
+def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, plot='off'):
+    "output = runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, plot='off')"
 
     import pandas as pd
+    import numpy as np
     import math
     import matplotlib.pyplot as plt
     from sklearn.cross_decomposition import PLSRegression
@@ -249,28 +250,26 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, p
     if plot == 'on':
         fig = plt.figure(figsize = (5,5), dpi=300)
         mxp = fig.add_subplot(1,1,1) 
-        mxp.scatter(Y_train, Y_train_predicted_CV, label = 'Train set')
-        mxp.scatter(Y_test, Y_test_predicted, label = 'Test set')
         mxp.set_xlabel('Measured')
         mxp.set_ylabel('Predicted')
-        mxp.set_xlim(min(min(Y_train), 
-                         min(Y_train_predicted_CV), 
-                         min(Y_test), 
+        mxp.set_xlim(min(min(np.array(Y_train)),
+                         min(Y_train_predicted_CV),
+                         min(np.array(Y_test)),
                          min(Y_test_predicted)),
-                     max(max(Y_train), 
-                         max(Y_train_predicted_CV), 
-                         max(Y_test), 
-                         max(Y_test_predicted))
-                     )
-        mxp.set_ylim(min(min(Y_train), 
-                         min(Y_train_predicted_CV), 
-                         min(Y_test), 
+                     max(max(np.array(Y_train)),
+                         max(Y_train_predicted_CV),
+                         max(np.array(Y_test)),
+                         max(Y_test_predicted)))
+        mxp.set_ylim(min(min(np.array(Y_train)),
+                         min(Y_train_predicted_CV),
+                         min(np.array(Y_test)),
                          min(Y_test_predicted)),
-                     max(max(Y_train), 
-                         max(Y_train_predicted_CV), 
-                         max(Y_test), 
-                         max(Y_test_predicted))
-                     )
+                     max(max(np.array(Y_train)),
+                         max(Y_train_predicted_CV),
+                         max(np.array(Y_test)),
+                         max(Y_test_predicted)))
+        mxp.scatter(Y_train, Y_train_predicted_CV, label = 'Train set')
+        mxp.scatter(Y_test, Y_test_predicted, label = 'Test set')
         mxp.legend()
 
     output = pd.DataFrame({'Components': [n_components],
@@ -284,7 +283,7 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='mncn', cv=10, p
 
     return output
 
-def optPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=10, plot='off'):
+def optPLS(X_train, Y_train, X_test, Y_test, max_components, prep='none', cv=10, plot='off'):
     "output = optPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off')"
 
     import pandas as pd
@@ -320,7 +319,7 @@ def optPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=10,
 
     return output
 
-def autoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=10, plot='off'):
+def autoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='none', cv=10, plot='off'):
     "bestoutput = autoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off')"
 
     import numpy as np
@@ -340,7 +339,7 @@ def autoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=10
 
     return bestoutput
 
-def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, prep='mncn', cv=10, plot='off'):
+def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, prep='none', cv=10, plot='off'):
     "bestoutput = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off')"
 
     from scipy.signal import savgol_filter
@@ -355,7 +354,7 @@ def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyo
 
     return bestoutput
 
-def sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='mncn', cv=10):
+def sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='none', cv=10):
     "bestoutput = sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10)"
     import pandas as pd
 
