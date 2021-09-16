@@ -4,7 +4,7 @@
 Usefull Chemometrics routines
 @author: caliariitalo
 """
-def splisamples(X, Y, TestSplit=0.25):
+def splitsamples(X, Y, TestSplit=0.25):
     "[X_train, Y_train, X_test, Y_test] = splisamples(X, y, TestSplit=0.25)"
 
     import pandas as pd

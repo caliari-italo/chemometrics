@@ -5,30 +5,42 @@ Created on Mon Sep 13 12:32:37 2021
 
 @author: caliariitalo
 """
+
 import pandas as pd
 import numpy as np
-from myPLS import sgautoPLS
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_boston
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
-from myPCA import *
-from myPLS import *
+from myChemometrics import *
 
 from sklearn import preprocessing
 
-#X = pd.read_csv('plums.csv').values[:,1:]
+data = pd.read_csv('peach_spectra_brix.csv')
+# Get reference values
+Y = data['Brix'].values
+# Get spectra
+X = data.drop(['Brix'], axis=1).values
 
-# #Xraw, Yraw = load_boston(return_X_y=True)
-# # Get reference values
-# Yraw = data['Brix'].values
-# # Get spectra
-# Xraw = data.drop(['Brix'], axis=1).values
-# # Get wavelengths
-# wl = np.arange(1100,2300,2)
-# X = X - X.mean(0)
-# Y = Y - Y.mean(0)
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y)
+[X_train, Y_train, X_test, Y_test] = splitsamples(X, Y, TestSplit=0.25)
 
-#runPCA(X)
-bestoutput = sgautoPLS(X_train, Y_train, X_test, Y_test, 10, prep='mncn')
+bestoutput = sgautoPLS(X_train, Y_train, X_test, Y_test, 10)
+
+output = sgPLS(X_train, Y_train, X_test, Y_test, 10,
+               int(bestoutput.iloc[0,:].Window),
+               int(bestoutput.iloc[0,:].PolyOrder),
+               int(bestoutput.iloc[0,:].Derivative),
+               cv=10, plot='on')
+
+runPCA(savgol_filter(X_train,
+                     int(bestoutput.iloc[0,:].Window),
+                     int(bestoutput.iloc[0,:].PolyOrder),
+                     int(bestoutput.iloc[0,:].Derivative)))
+
+runPCA2(savgol_filter(X_train,
+                     int(bestoutput.iloc[0,:].Window),
+                     int(bestoutput.iloc[0,:].PolyOrder),
+                     int(bestoutput.iloc[0,:].Derivative)),
+        savgol_filter(X_test,
+                     int(bestoutput.iloc[0,:].Window),
+                     int(bestoutput.iloc[0,:].PolyOrder),
+                     int(bestoutput.iloc[0,:].Derivative)))
