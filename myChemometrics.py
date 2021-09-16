@@ -175,12 +175,13 @@ def runPCA2(X1, X2, prep='none'):
                              min(scores2[:, 0]), min(scores2[:, 1])),
                          max(max(scores1[:, 0]), max(scores1[:, 1]),
                              max(scores2[:, 0]), max(scores2[:, 1])))
-    scoresplot1.scatter(scores1[:, 0], scores1[:, 1])
+    scoresplot1.scatter(scores1[:, 0], scores1[:, 1], label='X1')
     for xi, yi, indexi in zip(scores1[:, 0], scores1[:, 1], index1):
         scoresplot1.annotate(str(indexi), xy = (xi, yi))
-    scoresplot1.scatter(scores2[:, 0], scores2[:, 1])
+    scoresplot1.scatter(scores2[:, 0], scores2[:, 1], label='X2')
     for xi, yi, indexi in zip(scores2[:, 0], scores2[:, 1], index2):
         scoresplot1.annotate(str(indexi), xy = (xi, yi))
+    scoresplot1.legend()
 
     loadingsplot1 = fig2.add_subplot(1,2,2)
     loadingsplot1.set_xlabel('Variables')
@@ -204,12 +205,13 @@ def runPCA2(X1, X2, prep='none'):
                              min(scores2[:, 1]), min(scores2[:, 2])),
                          max(max(scores1[:, 1]), max(scores1[:, 2]),
                              max(scores2[:, 1]), max(scores2[:, 2])))
-    scoresplot2.scatter(scores1[:, 1], scores1[:, 2])
+    scoresplot2.scatter(scores1[:, 1], scores1[:, 2], label='X1')
     for xi, yi, indexi in zip(scores1[:, 1], scores1[:, 2], index1):
         scoresplot2.annotate(str(indexi), xy = (xi, yi))
-    scoresplot2.scatter(scores2[:, 1], scores2[:, 2])
+    scoresplot2.scatter(scores2[:, 1], scores2[:, 2], label='X2')
     for xi, yi, indexi in zip(scores2[:, 1], scores2[:, 2], index2):
         scoresplot2.annotate(str(indexi), xy = (xi, yi))
+    scoresplot2.legend()
 
     loadingsplot2 = fig3.add_subplot(1,2,2)
     loadingsplot2.set_xlabel('Variables')
@@ -270,6 +272,12 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, p
                          max(Y_test_predicted)))
         mxp.scatter(Y_train, Y_train_predicted_CV, label = 'Train set')
         mxp.scatter(Y_test, Y_test_predicted, label = 'Test set')
+        index1 = np.arange(0, len(Y_train))
+        index2 = np.arange(0, len(Y_test))
+        for xi, yi, indexi in zip(np.array(Y_train), np.array(Y_train_predicted_CV), index1):
+            mxp.annotate(str(indexi), xy = (xi, yi))
+        for xi, yi, indexi in zip(np.array(Y_test), np.array(Y_test_predicted), index2):
+            mxp.annotate(str(indexi), xy = (xi, yi))
         mxp.legend()
 
     output = pd.DataFrame({'Components': [n_components],
