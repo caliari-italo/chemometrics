@@ -233,7 +233,7 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, p
 
     if prep == 'mncn':
         X_train = X_train - X_train.mean(0)
-        X_test = X_test - X_test.mean(0)
+        X_test = X_test - X_train.mean(0)
 
     pls = PLSRegression(n_components)
     pls.fit(X_train, Y_train)
@@ -245,7 +245,7 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, p
     RMSEC = math.sqrt(mean_squared_error(Y_train, Y_train_predicted))
     RMSECV = math.sqrt(mean_squared_error(Y_train, Y_train_predicted_CV))
     RMSEP = math.sqrt(mean_squared_error(Y_test, Y_test_predicted))
-    R2 = r2_score(Y_train, Y_train_predicted)
+    R2C = r2_score(Y_train, Y_train_predicted)
     R2CV = r2_score(Y_train, Y_train_predicted_CV)
     R2P = r2_score(Y_test, Y_test_predicted)
 
@@ -282,7 +282,7 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, p
 
     output = pd.DataFrame({'Components': [n_components],
                            'RMSEC': [RMSEC],
-                           'R2': [R2],
+                           'R2C': [R2C],
                            'RMSECV': [RMSECV],
                            'R2CV': [R2CV],
                            'RMSEP': [RMSEP],
@@ -291,106 +291,165 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, p
 
     return output
 
-def optPLS(X_train, Y_train, X_test, Y_test, max_components, prep='none', cv=10, plot='off'):
-    "output = optPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off')"
+def autoPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv=10, plot='off'):
+    "output = autoPLS(X_train, Y_train, X_test, Y_test, max_components=20, cv=10, plot='off')"
 
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.model_selection import cross_val_predict
 
     output = pd.DataFrame()
 
     for n_components in range(1, max_components+1):
         output = output.append(runPLS(X_train, Y_train, X_test, Y_test,
                                       n_components, prep=prep, cv=cv, plot='off'))
-
-    if plot == 'on':
-        fig1 = plt.figure(figsize = (5,5), dpi=300)
-        RMSEplot = fig1.add_subplot(1,1,1) 
-        LV = np.arange(1, max_components+1)
-        RMSEplot.plot(LV, output.RMSEC, label = 'RMSEC')
-        RMSEplot.plot(LV, output.RMSECV, label = 'RMSECV')
-        RMSEplot.plot(LV, output.RMSEP, label = 'RMSEP')
-        RMSEplot.set_xlabel('LV', fontsize = 10)
-        RMSEplot.set_ylabel('A. U.', fontsize = 10)
-        RMSEplot.legend()
-
-        fig2 = plt.figure(figsize = (5,5), dpi=300)
-        R2plot = fig2.add_subplot(1,1,1)
-        LV = np.arange(1, max_components+1)
-        R2plot.plot(LV, output.R2, label = 'R2')
-        R2plot.plot(LV, output.R2CV, label = 'R2CV')
-        R2plot.plot(LV, output.R2P, label = 'R2P')
-        R2plot.set_xlabel('LV', fontsize = 10)
-        R2plot.set_ylabel('A. U.', fontsize = 10)
-        R2plot.legend()
-
-    return output
-
-def autoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='none', cv=10, plot='off'):
-    "bestoutput = autoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10, plot='off')"
-
-    import numpy as np
-
-    output = optPLS(X_train, Y_train, X_test, Y_test,
-                    max_components, prep=prep, cv=cv, plot=plot)
-
     diff = np.diff(output.RMSECV)
 
     for n_components in range(1,len(diff)+1):
         if diff[n_components-1]/output.RMSECV.iloc[n_components-1] > -0.1: break
 
-    bestoutput = runPLS(X_train, Y_train, X_test, Y_test,
-                        n_components, prep=prep, cv=cv, plot=plot)
+    if plot == 'on':
+        fig1 = plt.figure(figsize = (10, 5), dpi=300)
+        RMSEplot = fig1.add_subplot(1, 2, 1) 
+        RMSEplot.plot(output['Components'], output['RMSEC'], label = 'RMSEC')
+        RMSEplot.plot(output['Components'], output['RMSECV'], label = 'RMSECV')
+        RMSEplot.plot(output['Components'], output['RMSEP'], label = 'RMSEP')
+        RMSEplot.set_xlabel('Components', fontsize = 10)
+        RMSEplot.set_ylabel('A. U.', fontsize = 10)
+        RMSEplot.legend()
 
-    bestoutput = bestoutput.sort_values(by=['RMSECV'])
+        R2plot = fig1.add_subplot(1, 2, 2)
+        R2plot.plot(output['Components'], output['R2C'], label = 'R2C')
+        R2plot.plot(output['Components'], output['R2CV'], label = 'R2CV')
+        R2plot.plot(output['Components'], output['R2P'], label = 'R2P')
+        R2plot.set_xlabel('Components', fontsize = 10)
+        R2plot.set_ylabel('A. U.', fontsize = 10)
+        R2plot.legend()
 
-    return bestoutput
+    output = output.sort_values(by=['RMSECV'])
+
+    if plot == 'on':
+        RMSEplot.plot(output['Components'].iloc[0], output['RMSEC'].iloc[0], 'P', ms=10, mfc='red')
+        RMSEplot.plot(output['Components'].iloc[0], output['RMSECV'].iloc[0], 'P', ms=10, mfc='red')
+        RMSEplot.plot(output['Components'].iloc[0], output['RMSEP'].iloc[0], 'P', ms=10, mfc='red')
+        R2plot.plot(output['Components'].iloc[0], output['R2C'].iloc[0], 'P', ms=10, mfc='red')
+        R2plot.plot(output['Components'].iloc[0], output['R2CV'].iloc[0], 'P', ms=10, mfc='red')
+        R2plot.plot(output['Components'].iloc[0], output['R2P'].iloc[0], 'P', ms=10, mfc='red')
+
+        if prep == 'mncn':
+            X_train = X_train - X_train.mean(0)
+            X_test = X_test - X_train.mean(0)
+
+        pls = PLSRegression(output['Components'].iloc[0])
+        pls.fit(X_train, Y_train)
+
+        Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train, cv=cv)
+        Y_test_predicted = pls.predict(X_test)
+        
+        fig3 = plt.figure(figsize = (5,5), dpi=300)
+        mxp = fig3.add_subplot(1,1,1) 
+        mxp.set_xlabel('Measured')
+        mxp.set_ylabel('Predicted')
+        mxp.set_xlim(min(min(np.array(Y_train)),
+                         min(Y_train_predicted_CV),
+                         min(np.array(Y_test)),
+                         min(Y_test_predicted)),
+                     max(max(np.array(Y_train)),
+                         max(Y_train_predicted_CV),
+                         max(np.array(Y_test)),
+                         max(Y_test_predicted)))
+        mxp.set_ylim(min(min(np.array(Y_train)),
+                         min(Y_train_predicted_CV),
+                         min(np.array(Y_test)),
+                         min(Y_test_predicted)),
+                     max(max(np.array(Y_train)),
+                         max(Y_train_predicted_CV),
+                         max(np.array(Y_test)),
+                         max(Y_test_predicted)))
+        mxp.scatter(Y_train, Y_train_predicted_CV, label = 'Train set')
+        mxp.scatter(Y_test, Y_test_predicted, label = 'Test set')
+        index1 = np.arange(0, len(Y_train))
+        index2 = np.arange(0, len(Y_test))
+        for xi, yi, indexi in zip(np.array(Y_train), np.array(Y_train_predicted_CV), index1):
+            mxp.annotate(str(indexi), xy = (xi, yi))
+        for xi, yi, indexi in zip(np.array(Y_test), np.array(Y_test_predicted), index2):
+            mxp.annotate(str(indexi), xy = (xi, yi))
+        mxp.legend()
+
+    return output
 
 def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, prep='none', cv=10, plot='off'):
-    "bestoutput = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off')"
+    "output = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off')"
 
     from scipy.signal import savgol_filter
 
     X_train_sg = savgol_filter(X_train, window_length, polyorder, deriv)
     X_test_sg = savgol_filter(X_test, window_length, polyorder, deriv)
 
-    bestoutput = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test,
+    output = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test,
                          max_components, prep=prep, cv=cv, plot=plot)
 
-    bestoutput = bestoutput.sort_values(by=['RMSECV'])
+    return output
 
-    return bestoutput
-
-def sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, prep='none', cv=10):
-    "bestoutput = sgautoPLS(X_train, Y_train, X_test, Y_test, max_components, cv=10)"
+def autosgPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv=10, plot='off'):
+    "output = autosgPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv=10, plot='off')"
     import pandas as pd
+    from scipy.signal import savgol_filter
 
     sg = pd.DataFrame()
+    temp = pd.DataFrame()
     output = pd.DataFrame()
-    bestoutput = pd.DataFrame()
-    run = 0
 
     for window_length in range(5, int(len(X_test.T)*.15), 2):
         for deriv in range(0, 3):
             for polyorder in range(deriv, 3):
-                run = run + 1
-                sg = sg.append((pd.DataFrame({'Run': [run],
-                                              'Window': [window_length],
+                sg = sg.append((pd.DataFrame({'Window': [window_length],
                                               'PolyOrder': [polyorder],
                                               'Derivative': [deriv]
                                               })))
-                output = sgPLS(X_train, Y_train, X_test, Y_test,
+                temp = sgPLS(X_train, Y_train, X_test, Y_test,
                                max_components,
                                window_length, polyorder, deriv,
                                prep=prep, cv=cv, plot='off')
-                output['Run'] = run
-                bestoutput = bestoutput.append(output)
+                output = output.append(temp)
 
-    sg = sg.set_index('Run')
-    bestoutput = bestoutput.set_index('Run')
-    bestoutput = bestoutput.join(sg)
+    output = output.join(sg)
 
-    bestoutput = bestoutput.sort_values(by=['RMSECV'])
+    output = output.sort_values(by=['RMSECV'])
 
-    return bestoutput
+    if plot == 'on':
+        X_train = savgol_filter(X_train,
+                                int(output['Window'].iloc[0]),
+                                int(output['PolyOrder'].iloc[0]),
+                                int(output['Derivative'].iloc[0]))
+        X_test = savgol_filter(X_test,
+                                int(output['Window'].iloc[0]),
+                                int(output['PolyOrder'].iloc[0]),
+                                int(output['Derivative'].iloc[0]))
+        if prep == 'mncn':
+            X_train = X_train - X_train.mean(0)
+            X_test = X_test - X_train.mean(0)
+
+        autoPLS(X_train, Y_train, X_test, Y_test, max_components=max_components, prep=prep, cv=cv, plot='on')
+
+    return output
+
+def varsel(X_train, Y_train, X_test, Y_test, max_components, estimator, method, scoring='neg_mean_squared_error', prep='none', cv=10):
+    ""
+
+    from sklearn.feature_selection import RFECV
+
+    if estimator == 'pls':
+        autoPLS(X_train, Y_train, X_test, Y_test, max_components=10)
+        pls.fit(X_train, Y_train)
+
+
+    rfecv = RFECV(estimator=estimator, scoring=scoring)
+    rfecv.fit(X_train, Y_train)
+    X_train = rfecv.fit_transform(X_train, Y_train)
+    
+    varsel = rfecv.support_
+
+    return varsel
