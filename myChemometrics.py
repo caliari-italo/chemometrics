@@ -4,73 +4,66 @@
 Usefull Chemometrics routines
 @author: caliariitalo
 """
-def splitsamples(X, Y, TestSplit=0.25):
-    "[X_train, Y_train, X_test, Y_test] = splisamples(X, y, TestSplit=0.25)"
+def splitsamples(X, y, TestSplit=0.25):
+    "[X_train, y_train, X_test, y_test] = splisamples(X, y, TestSplit=0.25)"
 
     import pandas as pd
 
     X = pd.DataFrame(X)
-    Y = pd.DataFrame(Y)
+    y = pd.DataFrame(y)
 
-    index = pd.DataFrame(index=Y.sort_values(0).index)
+    index = pd.DataFrame(index=y.sort_values(0).index)
     indextrain = pd.DataFrame()
     indextest = index
 
     X_train = X
-    Y_train = Y
+    y_train = y
     X_test = pd.DataFrame()
-    Y_test = pd.DataFrame()
+    y_test = pd.DataFrame()
 
-    for temp in range(1, len(index)):
+    for temp in range(1, len(index)+1):
         if len(index) - len(indextest.iloc[int(len(indextest)/temp):
                                            len(indextest)-int(len(indextest)/temp):
                                            int(len(indextest)/temp)]) < len(index)*(1-TestSplit): break
 
-    len(indextest.iloc[int(len(indextest)/temp):
-                       len(indextest)-int(len(indextest)/temp):
-                       int(len(indextest)/temp)])
-
-    indextest = indextest.iloc[int(len(indextest)/temp):    
+    indextest = indextest.iloc[int(len(indextest)/temp):
                                len(indextest)-int(len(indextest)/temp):
                                int(len(indextest)/temp)]
 
     indextrain = index.drop(indextest.index)
 
     X_train = X.iloc[indextrain.index,:]
-    Y_train = Y.iloc[indextrain.index]
+    y_train = y.iloc[indextrain.index]
     X_test = X.iloc[indextest.index,:]
-    Y_test = Y.iloc[indextest.index]
+    y_test = y.iloc[indextest.index]
 
-    return [X_train, Y_train, X_test, Y_test]
+    return [X_train, y_train, X_test, y_test]
 
-def runPCA(X, prep='none'):
-    "runPCA(X, prep='none')"
+def runPCA(X):
+    "runPCA(X)"
 
-    import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.decomposition import PCA
-    from sklearn import preprocessing
+    import matplotlib.pyplot as plt
 
-    if prep == 'mncn': X = preprocessing.scale(X, with_mean='True', with_std='False')
-    if prep == 'auto': X = preprocessing.scale(X, with_mean='True', with_std='True')
-
-    index = np.arange(0, len(X)-1)
+    index = np.arange(len(X))
     max_components = 10
 
     pca = PCA(max_components)
     pca.fit(X)
 
-    fig1 = plt.figure(figsize = (5,5), dpi=300)
+    fig1 = plt.figure(figsize = (6,6), dpi=300)
     pcplot = fig1.add_subplot(1,1,1) 
-    pcplot.set_xlabel('PCs', fontsize = 10)
-    pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
-    pcplot.plot(np.arange(1, max_components+1), 
+    pcplot.set_xlabel('PCs')
+    pcplot.set_ylabel('Captured Variance (%)')
+    pcplot.plot(np.arange(max_components)+1, 
                 pca.explained_variance_ratio_*100,
                 label = 'Captured variance (Individual)')
-    pcplot.plot(np.arange(1, max_components+1),
-                [sum(pca.explained_variance_ratio_[0:temp+1]*100) 
+    pcplot.plot(np.arange(max_components)+1,
+                [sum(pca.explained_variance_ratio_[0:temp+1]*100)
                  for temp in range(max_components)],
                 label = 'Captured variance (Total)')
+    pcplot.set_xlim(1, max_components)
     pcplot.legend()
 
     scores = pca.transform(X)
@@ -78,21 +71,19 @@ def runPCA(X, prep='none'):
 
     n_components = 3
 
-    euclidean = np.zeros(X.shape[0])
+    euclidean = np.zeros(len(X))
     for i in range(n_components):
         euclidean += (scores[:,i] - np.mean(scores[:,:n_components]))**2/np.var(scores[:,:n_components])
     colors = [plt.cm.jet(float(i)/max(euclidean)) for i in euclidean]
 
-    fig2 = plt.figure(figsize = (12, 6), dpi=300)
+    fig2 = plt.figure(figsize = (12,6), dpi=300)
     scoresplot1 = fig2.add_subplot(1,2,1) 
-    scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)',
-                         fontsize = 10)
-    scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
-                         fontsize = 10)
+    scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)')
+    scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)')
     scoresplot1.set_xlim(min(min(scores[:, 0]), min(scores[:, 1])),
-                       max(max(scores[:, 0]), max(scores[:, 1])))
+                         max(max(scores[:, 0]), max(scores[:, 1])))
     scoresplot1.set_ylim(min(min(scores[:, 0]), min(scores[:, 1])),
-                       max(max(scores[:, 0]), max(scores[:, 1])))
+                         max(max(scores[:, 0]), max(scores[:, 1])))
     scoresplot1.scatter(scores[:, 0], scores[:, 1], c=colors, edgecolors='k', s=60)
     for xi, yi, indexi in zip(scores[:, 0], scores[:, 1], index):
         scoresplot1.annotate(str(indexi), xy = (xi, yi))
@@ -102,18 +93,18 @@ def runPCA(X, prep='none'):
     loadingsplot1.set_ylabel('Loadings')
     loadingsplot1.plot(loadings[0,:], label='Loadings PC1')
     loadingsplot1.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot1.plot(np.arange(X.shape[1]), np.zeros(X.shape[1]),'r--')
+    loadingsplot1.set_xlim(0, X.shape[1])
     loadingsplot1.legend()
     
     fig3 = plt.figure(figsize = (12,6), dpi=300)
     scoresplot2 = fig3.add_subplot(1,2,1)
-    scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
-                         fontsize = 10)
-    scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)',  
-                         fontsize = 10)
+    scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)')
+    scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)')
     scoresplot2.set_xlim(min(min(scores[:, 1]), min(scores[:, 2])),
-                       max(max(scores[:, 1]), max(scores[:, 2])))
+                         max(max(scores[:, 1]), max(scores[:, 2])))
     scoresplot2.set_ylim(min(min(scores[:, 1]), min(scores[:, 2])),
-                       max(max(scores[:, 1]), max(scores[:, 2])))
+                         max(max(scores[:, 1]), max(scores[:, 2])))
     scoresplot2.scatter(scores[:, 1], scores[:, 2], c=colors, edgecolors='k', s=60)
     for xi, yi, indexi in zip(scores[:, 1], scores[:, 2], index):
         scoresplot2.annotate(str(indexi), xy = (xi, yi))
@@ -123,38 +114,38 @@ def runPCA(X, prep='none'):
     loadingsplot2.set_ylabel('Loadings')
     loadingsplot2.plot(loadings[1,:], label='Loadings PC2')
     loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
+    loadingsplot2.plot(np.arange(X.shape[1]), np.zeros(X.shape[1]),'r--')
+    loadingsplot2.set_xlim(0, X.shape[1])
     loadingsplot2.legend()
 
-def runPCA2(X1, X2, prep='none'):
-    "runPCA2(X, X2, prep='none')"
+def runPCA2(X1, X2):
+    "runPCA2(X1, X2)"
 
-    import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.decomposition import PCA
-    from sklearn import preprocessing
+    import matplotlib.pyplot as plt
 
-    if prep == 'mncn': X1 = preprocessing.scale(X1, with_mean='True', with_std='False')
-    if prep == 'auto': X1 = preprocessing.scale(X1, with_mean='True', with_std='True')
-
-    index1 = np.arange(0, len(X1)-1)
-    index2 = np.arange(0, len(X2)-1)
+    index1 = np.arange(len(X1))
+    index2 = np.arange(len(X2))
 
     max_components = 10
 
     pca = PCA(max_components)
     pca.fit(X1)
 
-    fig1 = plt.figure(figsize = (5,5), dpi=300)
+    fig1 = plt.figure(figsize = (6,6), dpi=300)
     pcplot = fig1.add_subplot(1,1,1) 
-    pcplot.set_xlabel('PCs', fontsize = 10)
-    pcplot.set_ylabel('Captured Variance (%)', fontsize = 10)
-    pcplot.plot(np.arange(1, max_components+1), 
+    pcplot.set_xlabel('PCs')
+    pcplot.set_ylabel('Captured Variance (%)')
+    pcplot.plot(np.arange(max_components)+1, 
                 pca.explained_variance_ratio_*100,
                 label = 'Captured variance (Individual)')
-    pcplot.plot(np.arange(1, max_components+1),
-                [sum(pca.explained_variance_ratio_[0:temp+1]*100) 
+    pcplot.plot(np.arange(max_components)+1,
+                [sum(pca.explained_variance_ratio_[0:temp+1]*100)
                  for temp in range(max_components)],
                 label = 'Captured variance (Total)')
+    pcplot.set_xlim(1, max_components)
+    pcplot.set_xticks(np.arange(max_components)+1)
     pcplot.legend()
 
     scores1 = pca.transform(X1)
@@ -163,10 +154,8 @@ def runPCA2(X1, X2, prep='none'):
 
     fig2 = plt.figure(figsize = (12, 6), dpi=300)
     scoresplot1 = fig2.add_subplot(1,2,1)
-    scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)',
-                         fontsize = 10)
-    scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
-                         fontsize = 10)
+    scoresplot1.set_xlabel('Scores PC 1 (' + str(pca.explained_variance_ratio_[0]*100) + '%)')
+    scoresplot1.set_ylabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)')
     scoresplot1.set_xlim(min(min(scores1[:, 0]), min(scores1[:, 1]),
                              min(scores2[:, 0]), min(scores2[:, 1])),
                          max(max(scores1[:, 0]), max(scores1[:, 1]),
@@ -188,15 +177,16 @@ def runPCA2(X1, X2, prep='none'):
     loadingsplot1.set_ylabel('Loadings')
     loadingsplot1.plot(loadings[0,:], label='Loadings PC1')
     loadingsplot1.plot(loadings[1,:], label='Loadings PC2')
+    loadingsplot1.plot(np.arange(X1.shape[1]), np.zeros(X1.shape[1]),'r--')
+    loadingsplot1.set_xlim(0, X1.shape[1])
+    loadingsplot1.legend()
 
     loadingsplot1.legend()
     
     fig3 = plt.figure(figsize = (12,6), dpi=300)
     scoresplot2 = fig3.add_subplot(1,2,1)
-    scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)', 
-                         fontsize = 10)
-    scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)',  
-                         fontsize = 10)
+    scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)')
+    scoresplot2.set_ylabel('Scores PC 3 (' + str(pca.explained_variance_ratio_[2]*100) + '%)')
     scoresplot2.set_xlim(min(min(scores1[:, 1]), min(scores1[:, 2]),
                              min(scores2[:, 1]), min(scores2[:, 2])),
                          max(max(scores1[:, 1]), max(scores1[:, 2]),
@@ -213,15 +203,17 @@ def runPCA2(X1, X2, prep='none'):
         scoresplot2.annotate(str(indexi), xy = (xi, yi))
     scoresplot2.legend()
 
-    loadingsplot2 = fig3.add_subplot(1,2,2)
-    loadingsplot2.set_xlabel('Variables')
+    loadingsplot2 = fig3.add_subplot(1,2,2) 
+    loadingsplot2.set_xlabel('Variables') 
     loadingsplot2.set_ylabel('Loadings')
     loadingsplot2.plot(loadings[1,:], label='Loadings PC2')
     loadingsplot2.plot(loadings[2,:], label='Loadings PC3')
+    loadingsplot2.plot(np.arange(X1.shape[1]), np.zeros(X1.shape[1]),'r--')
+    loadingsplot2.set_xlim(0, X1.shape[1])
     loadingsplot2.legend()
 
-def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, plot='off'):
-    "output = runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, plot='off')"
+def runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off'):
+    "output = runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off')"
 
     import pandas as pd
     import numpy as np
@@ -231,68 +223,64 @@ def runPLS(X_train, Y_train, X_test, Y_test, n_components, prep='none', cv=10, p
     from sklearn.model_selection import cross_val_predict
     from sklearn.metrics import mean_squared_error, r2_score
 
-    if prep == 'mncn':
-        X_train = X_train - X_train.mean(0)
-        X_test = X_test - X_train.mean(0)
+    pls = PLSRegression(n_components=n_components)
+    pls.fit(X_train, y_train)
 
-    pls = PLSRegression(n_components)
-    pls.fit(X_train, Y_train)
+    y_train_predicted = pls.predict(X_train)
+    y_train_predicted_CV = cross_val_predict(pls, X_train, y_train, cv=cv)
+    y_test_predicted = pls.predict(X_test)
 
-    Y_train_predicted = pls.predict(X_train)
-    Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train, cv=cv)
-    Y_test_predicted = pls.predict(X_test)
+    rmsec = math.sqrt(mean_squared_error(y_train, y_train_predicted))
+    rmsecv = math.sqrt(mean_squared_error(y_train, y_train_predicted_CV))
+    rmsep = math.sqrt(mean_squared_error(y_test, y_test_predicted))
+    r2c = r2_score(y_train, y_train_predicted)
+    r2cv = r2_score(y_train, y_train_predicted_CV)
+    r2p = r2_score(y_test, y_test_predicted)
 
-    RMSEC = math.sqrt(mean_squared_error(Y_train, Y_train_predicted))
-    RMSECV = math.sqrt(mean_squared_error(Y_train, Y_train_predicted_CV))
-    RMSEP = math.sqrt(mean_squared_error(Y_test, Y_test_predicted))
-    R2C = r2_score(Y_train, Y_train_predicted)
-    R2CV = r2_score(Y_train, Y_train_predicted_CV)
-    R2P = r2_score(Y_test, Y_test_predicted)
+    output = pd.DataFrame({'Components': [n_components],
+                           'RMSEC': [rmsec],
+                           'R2C': [r2c],
+                           'RMSECV': [rmsecv],
+                           'R2CV': [r2cv],
+                           'RMSEP': [rmsep],
+                           'R2P': [r2p]})
 
     if plot == 'on':
-        fig = plt.figure(figsize = (5,5), dpi=300)
-        mxp = fig.add_subplot(1,1,1) 
+        plt.style.use('ggplot')
+        fig = plt.figure(figsize = (6,6), dpi=300)
+        mxp = fig.add_subplot(1,1,1)
         mxp.set_xlabel('Measured')
         mxp.set_ylabel('Predicted')
-        mxp.set_xlim(min(min(np.array(Y_train)),
-                         min(Y_train_predicted_CV),
-                         min(np.array(Y_test)),
-                         min(Y_test_predicted)),
-                     max(max(np.array(Y_train)),
-                         max(Y_train_predicted_CV),
-                         max(np.array(Y_test)),
-                         max(Y_test_predicted)))
-        mxp.set_ylim(min(min(np.array(Y_train)),
-                         min(Y_train_predicted_CV),
-                         min(np.array(Y_test)),
-                         min(Y_test_predicted)),
-                     max(max(np.array(Y_train)),
-                         max(Y_train_predicted_CV),
-                         max(np.array(Y_test)),
-                         max(Y_test_predicted)))
-        mxp.scatter(Y_train, Y_train_predicted_CV, label = 'Train set')
-        mxp.scatter(Y_test, Y_test_predicted, label = 'Test set')
-        index1 = np.arange(0, len(Y_train))
-        index2 = np.arange(0, len(Y_test))
-        for xi, yi, indexi in zip(np.array(Y_train), np.array(Y_train_predicted_CV), index1):
+        mxp.set_xlim(min(min(np.array(y_train)),
+                         min(y_train_predicted_CV),
+                         min(np.array(y_test)),
+                         min(y_test_predicted)),
+                     max(max(np.array(y_train)),
+                         max(y_train_predicted_CV),
+                         max(np.array(y_test)),
+                         max(y_test_predicted)))
+        mxp.set_ylim(min(min(np.array(y_train)),
+                         min(y_train_predicted_CV),
+                         min(np.array(y_test)),
+                         min(y_test_predicted)),
+                     max(max(np.array(y_train)),
+                         max(y_train_predicted_CV),
+                         max(np.array(y_test)),
+                         max(y_test_predicted)))
+        mxp.scatter(y_train, y_train_predicted_CV, label = 'Train set')
+        mxp.scatter(y_test, y_test_predicted, label = 'Test set')
+        index1 = np.arange(len(y_train))
+        index2 = np.arange(len(y_test))
+        for xi, yi, indexi in zip(np.array(y_train), np.array(y_train_predicted_CV), index1):
             mxp.annotate(str(indexi), xy = (xi, yi))
-        for xi, yi, indexi in zip(np.array(Y_test), np.array(Y_test_predicted), index2):
+        for xi, yi, indexi in zip(np.array(y_test), np.array(y_test_predicted), index2):
             mxp.annotate(str(indexi), xy = (xi, yi))
         mxp.legend()
 
-    output = pd.DataFrame({'Components': [n_components],
-                           'RMSEC': [RMSEC],
-                           'R2C': [R2C],
-                           'RMSECV': [RMSECV],
-                           'R2CV': [R2CV],
-                           'RMSEP': [RMSEP],
-                           'R2P': [R2P]
-                           })
-
     return output
 
-def autoPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv=10, plot='off'):
-    "output = autoPLS(X_train, Y_train, X_test, Y_test, max_components=20, cv=10, plot='off')"
+def autoPLS(X_train, y_train, X_test, y_test, max_components=20, cv=10, plot='off'):
+    "output = autoPLS(X_train, y_train, X_test, y_test, max_components=20, cv=10, plot='off')"
 
     import pandas as pd
     import numpy as np
@@ -303,153 +291,173 @@ def autoPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv
     output = pd.DataFrame()
 
     for n_components in range(1, max_components+1):
-        output = output.append(runPLS(X_train, Y_train, X_test, Y_test,
-                                      n_components, prep=prep, cv=cv, plot='off'))
-    diff = np.diff(output.RMSECV)
-
-    for n_components in range(1,len(diff)+1):
-        if diff[n_components-1]/output.RMSECV.iloc[n_components-1] > -0.1: break
+        output = output.append(runPLS(X_train, y_train, X_test, y_test,
+                                      n_components=n_components, cv=10, plot='off'),
+                               ignore_index=True)
+    diff = np.diff(output['RMSECV'])
+    for n_components in range(1, max_components):
+        if (diff/output['RMSECV'].iloc[len(diff)])[n_components-1] > -0.025: break
 
     if plot == 'on':
-        fig1 = plt.figure(figsize = (10, 5), dpi=300)
-        RMSEplot = fig1.add_subplot(1, 2, 1) 
+        plt.style.use('ggplot')
+        fig1 = plt.figure(figsize = (12,6), dpi=300)
+        RMSEplot = fig1.add_subplot(1,2,1)
         RMSEplot.plot(output['Components'], output['RMSEC'], label = 'RMSEC')
         RMSEplot.plot(output['Components'], output['RMSECV'], label = 'RMSECV')
         RMSEplot.plot(output['Components'], output['RMSEP'], label = 'RMSEP')
-        RMSEplot.set_xlabel('Components', fontsize = 10)
-        RMSEplot.set_ylabel('A. U.', fontsize = 10)
+        RMSEplot.set_xlabel('Components')
+        RMSEplot.set_ylabel('A. U.')
+        RMSEplot.set_xlim(1, max_components)
+        RMSEplot.set_xticks(np.arange(max_components)+1)
         RMSEplot.legend()
 
-        R2plot = fig1.add_subplot(1, 2, 2)
+        R2plot = fig1.add_subplot(1,2,2)
         R2plot.plot(output['Components'], output['R2C'], label = 'R2C')
         R2plot.plot(output['Components'], output['R2CV'], label = 'R2CV')
         R2plot.plot(output['Components'], output['R2P'], label = 'R2P')
-        R2plot.set_xlabel('Components', fontsize = 10)
-        R2plot.set_ylabel('A. U.', fontsize = 10)
+        R2plot.set_xlabel('Components')
+        R2plot.set_ylabel('A. U.')
+        R2plot.set_xlim(1, max_components)
+        R2plot.set_xticks(np.arange(max_components)+1)
         R2plot.legend()
 
-    output = output.sort_values(by=['RMSECV'])
+        RMSEplot.plot(output['Components'].iloc[n_components-1], output['RMSEC'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        RMSEplot.plot(output['Components'].iloc[n_components-1], output['RMSECV'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        RMSEplot.plot(output['Components'].iloc[n_components-1], output['RMSEP'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        R2plot.plot(output['Components'].iloc[n_components-1], output['R2C'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        R2plot.plot(output['Components'].iloc[n_components-1], output['R2CV'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        R2plot.plot(output['Components'].iloc[n_components-1], output['R2P'].iloc[n_components-1], 'P', ms=10, mfc='red')
 
-    if plot == 'on':
-        RMSEplot.plot(output['Components'].iloc[0], output['RMSEC'].iloc[0], 'P', ms=10, mfc='red')
-        RMSEplot.plot(output['Components'].iloc[0], output['RMSECV'].iloc[0], 'P', ms=10, mfc='red')
-        RMSEplot.plot(output['Components'].iloc[0], output['RMSEP'].iloc[0], 'P', ms=10, mfc='red')
-        R2plot.plot(output['Components'].iloc[0], output['R2C'].iloc[0], 'P', ms=10, mfc='red')
-        R2plot.plot(output['Components'].iloc[0], output['R2CV'].iloc[0], 'P', ms=10, mfc='red')
-        R2plot.plot(output['Components'].iloc[0], output['R2P'].iloc[0], 'P', ms=10, mfc='red')
+        pls = PLSRegression(n_components=n_components)
+        pls.fit(X_train, y_train)
 
-        if prep == 'mncn':
-            X_train = X_train - X_train.mean(0)
-            X_test = X_test - X_train.mean(0)
-
-        pls = PLSRegression(output['Components'].iloc[0])
-        pls.fit(X_train, Y_train)
-
-        Y_train_predicted_CV = cross_val_predict(pls, X_train, Y_train, cv=cv)
-        Y_test_predicted = pls.predict(X_test)
+        y_train_predicted_CV = cross_val_predict(pls, X_train, y_train, cv=cv)
+        y_test_predicted = pls.predict(X_test)
         
-        fig3 = plt.figure(figsize = (5,5), dpi=300)
-        mxp = fig3.add_subplot(1,1,1) 
+        fig3 = plt.figure(figsize = (6,6), dpi=300)
+        mxp = fig3.add_subplot(1,1,1)
         mxp.set_xlabel('Measured')
         mxp.set_ylabel('Predicted')
-        mxp.set_xlim(min(min(np.array(Y_train)),
-                         min(Y_train_predicted_CV),
-                         min(np.array(Y_test)),
-                         min(Y_test_predicted)),
-                     max(max(np.array(Y_train)),
-                         max(Y_train_predicted_CV),
-                         max(np.array(Y_test)),
-                         max(Y_test_predicted)))
-        mxp.set_ylim(min(min(np.array(Y_train)),
-                         min(Y_train_predicted_CV),
-                         min(np.array(Y_test)),
-                         min(Y_test_predicted)),
-                     max(max(np.array(Y_train)),
-                         max(Y_train_predicted_CV),
-                         max(np.array(Y_test)),
-                         max(Y_test_predicted)))
-        mxp.scatter(Y_train, Y_train_predicted_CV, label = 'Train set')
-        mxp.scatter(Y_test, Y_test_predicted, label = 'Test set')
-        index1 = np.arange(0, len(Y_train))
-        index2 = np.arange(0, len(Y_test))
-        for xi, yi, indexi in zip(np.array(Y_train), np.array(Y_train_predicted_CV), index1):
+        mxp.set_xlim(min(min(np.array(y_train)),
+                         min(y_train_predicted_CV),
+                         min(np.array(y_test)),
+                         min(y_test_predicted)),
+                     max(max(np.array(y_train)),
+                         max(y_train_predicted_CV),
+                         max(np.array(y_test)),
+                         max(y_test_predicted)))
+        mxp.set_ylim(min(min(np.array(y_train)),
+                         min(y_train_predicted_CV),
+                         min(np.array(y_test)),
+                         min(y_test_predicted)),
+                     max(max(np.array(y_train)),
+                         max(y_train_predicted_CV),
+                         max(np.array(y_test)),
+                         max(y_test_predicted)))
+        mxp.scatter(y_train, y_train_predicted_CV, label = 'Train set')
+        mxp.scatter(y_test, y_test_predicted, label = 'Test set')
+        index1 = np.arange(len(y_train))
+        index2 = np.arange(len(y_test))
+        for xi, yi, indexi in zip(np.array(y_train), np.array(y_train_predicted_CV), index1):
             mxp.annotate(str(indexi), xy = (xi, yi))
-        for xi, yi, indexi in zip(np.array(Y_test), np.array(Y_test_predicted), index2):
+        for xi, yi, indexi in zip(np.array(y_test), np.array(y_test_predicted), index2):
             mxp.annotate(str(indexi), xy = (xi, yi))
         mxp.legend()
 
-    return output
-
-def sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, prep='none', cv=10, plot='off'):
-    "output = sgPLS(X_train, Y_train, X_test, Y_test, max_components, window_length, polyorder, deriv, cv=10, plot='off')"
-
-    from scipy.signal import savgol_filter
-
-    X_train_sg = savgol_filter(X_train, window_length, polyorder, deriv)
-    X_test_sg = savgol_filter(X_test, window_length, polyorder, deriv)
-
-    output = autoPLS(X_train_sg, Y_train, X_test_sg, Y_test,
-                         max_components, prep=prep, cv=cv, plot=plot)
+    output = output.iloc[n_components-1]
+    output.name = 'autoPLS'
+    output = pd.DataFrame(output).T
 
     return output
 
-def autosgPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv=10, plot='off'):
-    "output = autosgPLS(X_train, Y_train, X_test, Y_test, max_components=20, prep='none', cv=10, plot='off')"
+def autosgPLS(X_train, y_train, X_test, y_test, max_components, cv=10, plot='off'):
+    "output = autosgPLS(X_train, y_train, X_test, y_test, max_components=20, cv=10, plot='off')"
+
     import pandas as pd
     from scipy.signal import savgol_filter
-
+    
     sg = pd.DataFrame()
     temp = pd.DataFrame()
     output = pd.DataFrame()
 
-    for window_length in range(5, int(len(X_test.T)*.15), 2):
-        for deriv in range(0, 3):
-            for polyorder in range(deriv, 3):
+    for window_length in range(1, int(X_test.shape[1]*0.1), 2):
+        for deriv in range(0, 2):
+            for polyorder in range(deriv, min(2, window_length)):
+                X_train_sg = savgol_filter(X_train, window_length, polyorder, deriv)
+                X_test_sg = savgol_filter(X_test, window_length, polyorder, deriv)
                 sg = sg.append((pd.DataFrame({'Window': [window_length],
                                               'PolyOrder': [polyorder],
-                                              'Derivative': [deriv]
-                                              })))
-                temp = sgPLS(X_train, Y_train, X_test, Y_test,
-                               max_components,
-                               window_length, polyorder, deriv,
-                               prep=prep, cv=cv, plot='off')
-                output = output.append(temp)
+                                              'Derivative': [deriv]})),
+                               ignore_index=True)
+                temp = autoPLS(X_train_sg, y_train, X_test_sg, y_test,
+                                max_components=max_components,
+                                cv=cv,
+                                plot='off')
+                output = output.append(temp, ignore_index=True)
 
     output = output.join(sg)
 
     output = output.sort_values(by=['RMSECV'])
+    output = output.iloc[0]
+    output.name = 'autosgPLS'
+    output = pd.DataFrame(output).T
 
     if plot == 'on':
-        X_train = savgol_filter(X_train,
-                                int(output['Window'].iloc[0]),
-                                int(output['PolyOrder'].iloc[0]),
-                                int(output['Derivative'].iloc[0]))
-        X_test = savgol_filter(X_test,
-                                int(output['Window'].iloc[0]),
-                                int(output['PolyOrder'].iloc[0]),
-                                int(output['Derivative'].iloc[0]))
-        if prep == 'mncn':
-            X_train = X_train - X_train.mean(0)
-            X_test = X_test - X_train.mean(0)
-
-        autoPLS(X_train, Y_train, X_test, Y_test, max_components=max_components, prep=prep, cv=cv, plot='on')
+        X_train_sg = savgol_filter(X_train,
+                                    int(output['Window']),
+                                    int(output['PolyOrder']),
+                                    int(output['Derivative']))
+        X_test_sg = savgol_filter(X_test,
+                                    int(output['Window']),
+                                    int(output['PolyOrder']),
+                                    int(output['Derivative']))
+        autoPLS(X_train_sg, y_train, X_test_sg, y_test, max_components, cv=cv, plot='on')
 
     return output
 
-def varsel(X_train, Y_train, X_test, Y_test, max_components, estimator, method, scoring='neg_mean_squared_error', prep='none', cv=10):
-    ""
+def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv=10, plot='off'):
+    "[output, varsel] = varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv=10, plot='off')"
 
+    import pandas as pd
+    import numpy as np
+    from sklearn.cross_decomposition import PLSRegression
     from sklearn.feature_selection import RFECV
+    import matplotlib.pyplot as plt
+    from sklearn.ensemble import RandomForestRegressor
 
-    if estimator == 'pls':
-        autoPLS(X_train, Y_train, X_test, Y_test, max_components=10)
-        pls.fit(X_train, Y_train)
+    varsel = pd.DataFrame()
+    output = pd.DataFrame()
 
+    if estimator == 'PLS' or 'all':
+        for n_components in range(1, max_components+1):
+            pls = PLSRegression(n_components=n_components)
+            pls.fit(X_train, y_train)
+            rfecv = RFECV(estimator=pls, scoring='neg_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05), min_features_to_select=n_components)
+            rfecv.fit(X_train, y_train)
+            varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    rfecv = RFECV(estimator=estimator, scoring=scoring)
-    rfecv.fit(X_train, Y_train)
-    X_train = rfecv.fit_transform(X_train, Y_train)
-    
-    varsel = rfecv.support_
+    if estimator == 'Random Forests' or 'all':
+        regr = RandomForestRegressor(max_depth=X_train.shape[1])
+        regr.fit(X_train, y_train.values.ravel())
+        rfecv = RFECV(estimator=regr, scoring='neg_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05))
+        rfecv.fit(X_train, y_train.values.ravel())
+        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    return varsel
+    for temp in range(varsel.shape[0]):
+        output = output.append(autoPLS(X_train.iloc[:,varsel.iloc[temp,:].values], y_train,
+                                      X_test.iloc[:,varsel.iloc[temp,:].values], y_test,
+                                      max_components=max_components, cv=10, plot='off'),
+                               ignore_index=True)
+
+    output = output.sort_values(by=['RMSECV'])
+    varsel = varsel.iloc[output.index.values, :]
+
+    if plot == 'on':
+        for plot in range(varsel.shape[0]):
+            fig = plt.figure(figsize = (6,6), dpi=300)
+            select = fig.add_subplot(1,1,1) 
+            select.plot(X_train.T)
+            select.vlines(np.arange(0, varsel.shape[1])[varsel.iloc[0].values], ymin=min(X_train.min(0)), ymax=max(X_train.max(0)))
+            autoPLS(X_train.iloc[:,varsel.iloc[0,:].values], y_train, X_test.iloc[:,varsel.iloc[0,:].values], y_test, max_components=max_components, cv=cv, plot='on')
+
+    return [output, varsel]
