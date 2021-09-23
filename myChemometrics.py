@@ -182,7 +182,7 @@ def runPCA2(X1, X2):
     loadingsplot1.legend()
 
     loadingsplot1.legend()
-    
+
     fig3 = plt.figure(figsize = (12,6), dpi=300)
     scoresplot2 = fig3.add_subplot(1,2,1)
     scoresplot2.set_xlabel('Scores PC 2 (' + str(pca.explained_variance_ratio_[1]*100) + '%)')
@@ -212,23 +212,18 @@ def runPCA2(X1, X2):
     loadingsplot2.set_xlim(0, X1.shape[1])
     loadingsplot2.legend()
 
-def runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off'):
-    "output = runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off')"
+def modelmetrics(model, X_train, y_train, X_test, y_test, cv=10):
+    "output = modelmetrics(model, X_train, y_train, X_test, y_test, cv=10)"
 
     import pandas as pd
-    import numpy as np
     import math
-    import matplotlib.pyplot as plt
-    from sklearn.cross_decomposition import PLSRegression
     from sklearn.model_selection import cross_val_predict
     from sklearn.metrics import mean_squared_error, r2_score
 
-    pls = PLSRegression(n_components=n_components)
-    pls.fit(X_train, y_train)
-
-    y_train_predicted = pls.predict(X_train)
-    y_train_predicted_CV = cross_val_predict(pls, X_train, y_train, cv=cv)
-    y_test_predicted = pls.predict(X_test)
+    model.fit(X_train, y_train)
+    y_train_predicted = model.predict(X_train)
+    y_train_predicted_CV = cross_val_predict(model, X_train, y_train, cv=cv)
+    y_test_predicted = model.predict(X_test)
 
     rmsec = math.sqrt(mean_squared_error(y_train, y_train_predicted))
     rmsecv = math.sqrt(mean_squared_error(y_train, y_train_predicted_CV))
@@ -237,7 +232,7 @@ def runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off'):
     r2cv = r2_score(y_train, y_train_predicted_CV)
     r2p = r2_score(y_test, y_test_predicted)
 
-    output = pd.DataFrame({'Components': [n_components],
+    output = pd.DataFrame({'Model':[model],
                            'RMSEC': [rmsec],
                            'R2C': [r2c],
                            'RMSECV': [rmsecv],
@@ -245,7 +240,23 @@ def runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off'):
                            'RMSEP': [rmsep],
                            'R2P': [r2p]})
 
+    return output
+
+
+def runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off'):
+    "output = runPLS(X_train, y_train, X_test, y_test, n_components, cv=10, plot='off')"
+
+    import numpy as np
+    from sklearn.cross_decomposition import PLSRegression
+
+    model = PLSRegression(n_components=n_components)
+    output = modelmetrics(model, X_train, y_train, X_test, y_test, cv=cv)
+
     if plot == 'on':
+        import matplotlib.pyplot as plt
+        from sklearn.model_selection import cross_val_predict
+        y_train_predicted_CV = cross_val_predict(model, X_train, y_train, cv=cv)
+        y_test_predicted = model.predict(X_test)
         plt.style.use('ggplot')
         fig = plt.figure(figsize = (6,6), dpi=300)
         mxp = fig.add_subplot(1,1,1)
@@ -284,27 +295,27 @@ def autoPLS(X_train, y_train, X_test, y_test, max_components=20, cv=10, plot='of
 
     import pandas as pd
     import numpy as np
-    import matplotlib.pyplot as plt
-    from sklearn.cross_decomposition import PLSRegression
-    from sklearn.model_selection import cross_val_predict
 
     output = pd.DataFrame()
 
-    for n_components in range(1, max_components+1):
+    for n_components in range(1, min(max_components+1, X_train.shape[1]+1)):
         output = output.append(runPLS(X_train, y_train, X_test, y_test,
-                                      n_components=n_components, cv=10, plot='off'),
+                                      n_components=n_components, cv=cv, plot='off'),
                                ignore_index=True)
     diff = np.diff(output['RMSECV'])
-    for n_components in range(1, max_components):
-        if (diff/output['RMSECV'].iloc[len(diff)])[n_components-1] > -0.025: break
+    for n_components in range(1, min(max_components, X_train.shape[1])):
+        if (diff/output['RMSECV'].iloc[len(diff)])[n_components-1] > -0.1: break
 
     if plot == 'on':
+        import matplotlib.pyplot as plt
+        from sklearn.cross_decomposition import PLSRegression
+        from sklearn.model_selection import cross_val_predict
         plt.style.use('ggplot')
         fig1 = plt.figure(figsize = (12,6), dpi=300)
         RMSEplot = fig1.add_subplot(1,2,1)
-        RMSEplot.plot(output['Components'], output['RMSEC'], label = 'RMSEC')
-        RMSEplot.plot(output['Components'], output['RMSECV'], label = 'RMSECV')
-        RMSEplot.plot(output['Components'], output['RMSEP'], label = 'RMSEP')
+        RMSEplot.plot(np.arange(max_components)+1, output['RMSEC'], label = 'RMSEC')
+        RMSEplot.plot(np.arange(max_components)+1, output['RMSECV'], label = 'RMSECV')
+        RMSEplot.plot(np.arange(max_components)+1, output['RMSEP'], label = 'RMSEP')
         RMSEplot.set_xlabel('Components')
         RMSEplot.set_ylabel('A. U.')
         RMSEplot.set_xlim(1, max_components)
@@ -312,28 +323,27 @@ def autoPLS(X_train, y_train, X_test, y_test, max_components=20, cv=10, plot='of
         RMSEplot.legend()
 
         R2plot = fig1.add_subplot(1,2,2)
-        R2plot.plot(output['Components'], output['R2C'], label = 'R2C')
-        R2plot.plot(output['Components'], output['R2CV'], label = 'R2CV')
-        R2plot.plot(output['Components'], output['R2P'], label = 'R2P')
+        R2plot.plot(np.arange(max_components)+1, output['R2C'], label = 'R2C')
+        R2plot.plot(np.arange(max_components)+1, output['R2CV'], label = 'R2CV')
+        R2plot.plot(np.arange(max_components)+1, output['R2P'], label = 'R2P')
         R2plot.set_xlabel('Components')
         R2plot.set_ylabel('A. U.')
         R2plot.set_xlim(1, max_components)
         R2plot.set_xticks(np.arange(max_components)+1)
         R2plot.legend()
 
-        RMSEplot.plot(output['Components'].iloc[n_components-1], output['RMSEC'].iloc[n_components-1], 'P', ms=10, mfc='red')
-        RMSEplot.plot(output['Components'].iloc[n_components-1], output['RMSECV'].iloc[n_components-1], 'P', ms=10, mfc='red')
-        RMSEplot.plot(output['Components'].iloc[n_components-1], output['RMSEP'].iloc[n_components-1], 'P', ms=10, mfc='red')
-        R2plot.plot(output['Components'].iloc[n_components-1], output['R2C'].iloc[n_components-1], 'P', ms=10, mfc='red')
-        R2plot.plot(output['Components'].iloc[n_components-1], output['R2CV'].iloc[n_components-1], 'P', ms=10, mfc='red')
-        R2plot.plot(output['Components'].iloc[n_components-1], output['R2P'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        RMSEplot.plot(n_components, output['RMSEC'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        RMSEplot.plot(n_components, output['RMSECV'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        RMSEplot.plot(n_components, output['RMSEP'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        R2plot.plot(n_components, output['R2C'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        R2plot.plot(n_components, output['R2CV'].iloc[n_components-1], 'P', ms=10, mfc='red')
+        R2plot.plot(n_components, output['R2P'].iloc[n_components-1], 'P', ms=10, mfc='red')
 
         pls = PLSRegression(n_components=n_components)
         pls.fit(X_train, y_train)
-
         y_train_predicted_CV = cross_val_predict(pls, X_train, y_train, cv=cv)
         y_test_predicted = pls.predict(X_test)
-        
+
         fig3 = plt.figure(figsize = (6,6), dpi=300)
         mxp = fig3.add_subplot(1,1,1)
         mxp.set_xlabel('Measured')
@@ -375,7 +385,7 @@ def autosgPLS(X_train, y_train, X_test, y_test, max_components, cv=10, plot='off
 
     import pandas as pd
     from scipy.signal import savgol_filter
-    
+
     sg = pd.DataFrame()
     temp = pd.DataFrame()
     output = pd.DataFrame()
@@ -416,32 +426,61 @@ def autosgPLS(X_train, y_train, X_test, y_test, max_components, cv=10, plot='off
     return output
 
 def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv=10, plot='off'):
-    "[output, varsel] = varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv=10, plot='off')"
+    "[output, varsel] = varsel(X_train, y_train, X_test, y_test, n_components, estimator='all', cv=10, plot='off')"
 
     import pandas as pd
-    import numpy as np
-    from sklearn.cross_decomposition import PLSRegression
     from sklearn.feature_selection import RFECV
-    import matplotlib.pyplot as plt
-    from sklearn.ensemble import RandomForestRegressor
 
     varsel = pd.DataFrame()
     output = pd.DataFrame()
 
     if estimator == 'PLS' or 'all':
+        from sklearn.cross_decomposition import PLSRegression
         for n_components in range(1, max_components+1):
-            pls = PLSRegression(n_components=n_components)
-            pls.fit(X_train, y_train)
-            rfecv = RFECV(estimator=pls, scoring='neg_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05), min_features_to_select=n_components)
-            rfecv.fit(X_train, y_train)
-            varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+            model = PLSRegression(n_components=n_components)
+            rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05), min_features_to_select=n_components)
+            rfecv.fit(X_train, y_train.values.ravel())
+            varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
 
     if estimator == 'Random Forests' or 'all':
-        regr = RandomForestRegressor(max_depth=X_train.shape[1])
-        regr.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=regr, scoring='neg_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05))
+        from sklearn.ensemble import RandomForestRegressor
+        model = RandomForestRegressor(max_depth=X_train.shape[1]*0.5)
+        model.fit(X_train, y_train.values.ravel())
+        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
         rfecv.fit(X_train, y_train.values.ravel())
-        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+
+    if estimator == 'Ridge regression' or 'all':
+        from sklearn import linear_model
+        model = linear_model.Ridge(alpha=.5)
+        model.fit(X_train, y_train.values.ravel())
+        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
+        rfecv.fit(X_train, y_train.values.ravel())
+        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+
+    if estimator == 'Lasso' or 'all':
+        from sklearn import linear_model
+        model = linear_model.Lasso(alpha=0.1)
+        model.fit(X_train, y_train.values.ravel())
+        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
+        rfecv.fit(X_train, y_train.values.ravel())
+        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+
+    if estimator == 'LARS Lasso' or 'all':
+        from sklearn import linear_model
+        model = linear_model.LassoLars(alpha=.1)
+        model.fit(X_train, y_train.values.ravel())
+        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
+        rfecv.fit(X_train, y_train.values.ravel())
+        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+
+    if estimator == 'Bayesian Ridge' or 'all':
+        from sklearn import linear_model
+        model = linear_model.BayesianRidge()
+        model.fit(X_train, y_train.values.ravel())
+        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
+        rfecv.fit(X_train, y_train.values.ravel())
+        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
 
     for temp in range(varsel.shape[0]):
         output = output.append(autoPLS(X_train.iloc[:,varsel.iloc[temp,:].values], y_train,
@@ -453,11 +492,12 @@ def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv
     varsel = varsel.iloc[output.index.values, :]
 
     if plot == 'on':
-        for plot in range(varsel.shape[0]):
-            fig = plt.figure(figsize = (6,6), dpi=300)
-            select = fig.add_subplot(1,1,1) 
-            select.plot(X_train.T)
-            select.vlines(np.arange(0, varsel.shape[1])[varsel.iloc[0].values], ymin=min(X_train.min(0)), ymax=max(X_train.max(0)))
-            autoPLS(X_train.iloc[:,varsel.iloc[0,:].values], y_train, X_test.iloc[:,varsel.iloc[0,:].values], y_test, max_components=max_components, cv=cv, plot='on')
+        import matplotlib.pyplot as plt
+        import numpy as np
+        fig = plt.figure(figsize = (6,6), dpi=300)
+        select = fig.add_subplot(1,1,1) 
+        select.plot(X_train.T)
+        select.vlines(np.arange(0, varsel.shape[1])[varsel.iloc[0].values], ymin=min(X_train.min(0)), ymax=max(X_train.max(0)),linestyles='dotted', color='r')
+        autoPLS(X_train.iloc[:,varsel.iloc[0,:].values], y_train, X_test.iloc[:,varsel.iloc[0,:].values], y_test, max_components=max_components, cv=cv, plot='on')
 
     return [output, varsel]

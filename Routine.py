@@ -7,16 +7,20 @@ Created on Mon Sep 13 12:32:37 2021
 """
 from myChemometrics import *
 import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import make_regression
 
-[X_train, y_train, X_test, y_test] = splitsamples(X, y)
+[X, y] = make_regression(n_samples=200, n_features=500, n_informative=250, effective_rank=5)
 
-autosgPLS = autosgPLS(X_train, y_train, X_test, y_test, max_components=15, cv=10, plot='on')
+X=pd.DataFrame(X)
+y=pd.DataFrame(y)
 
-X_train_sg = pd.DataFrame(savgol_filter(X_train, int(autosgPLS['Window']), int(autosgPLS['PolyOrder']), int(autosgPLS['Derivative'])))
-X_test_sg = pd.DataFrame(savgol_filter(X_test, int(autosgPLS['Window']), int(autosgPLS['PolyOrder']), int(autosgPLS['Derivative'])))
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
 
-autoPLS = autoPLS(X_train_sg, y_train, X_test_sg, y_test, max_components=15, cv=10, plot='on')
+[output, varsel] = varsel(X_train, y_train, X_test, y_test, max_components=10, estimator='all', cv=10, plot='off')
+
+
+
+output = autoPLS(X_train, y_train, X_test, y_test, max_components=20, cv=10, plot='on')
+
+output = runPLS(X_train, y_train, X_test, y_test, n_components=5, cv=10, plot='on')
