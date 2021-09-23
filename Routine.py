@@ -17,7 +17,7 @@ y=pd.DataFrame(y)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
 
-[output, varsel] = varsel(X_train, y_train, X_test, y_test, max_components=10, estimator='all', cv=10, plot='off')
+[output, varsel] = varsel(X_train, y_train, X_test, y_test, max_components=10, estimator='all', cv=10, plot='on')
 
 
 

@@ -431,32 +431,36 @@ def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv
     import pandas as pd
     from sklearn.feature_selection import RFECV
 
+    info = pd.DataFrame()
     varsel = pd.DataFrame()
     output = pd.DataFrame()
 
-    if estimator == 'PLS' or 'all':
+    if estimator == 'PLSRegression' or 'all':
         from sklearn.cross_decomposition import PLSRegression
         for n_components in range(1, max_components+1):
             model = PLSRegression(n_components=n_components)
             rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05), min_features_to_select=n_components)
             rfecv.fit(X_train, y_train.values.ravel())
-            varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+            info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+            varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'Random Forests' or 'all':
+    if estimator == 'RandomForestRegressor' or 'all':
         from sklearn.ensemble import RandomForestRegressor
         model = RandomForestRegressor(max_depth=X_train.shape[1]*0.5)
         model.fit(X_train, y_train.values.ravel())
         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
         rfecv.fit(X_train, y_train.values.ravel())
-        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'Ridge regression' or 'all':
+    if estimator == 'Ridge' or 'all':
         from sklearn import linear_model
         model = linear_model.Ridge(alpha=.5)
         model.fit(X_train, y_train.values.ravel())
         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
         rfecv.fit(X_train, y_train.values.ravel())
-        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
     if estimator == 'Lasso' or 'all':
         from sklearn import linear_model
@@ -464,31 +468,33 @@ def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv
         model.fit(X_train, y_train.values.ravel())
         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
         rfecv.fit(X_train, y_train.values.ravel())
-        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'LARS Lasso' or 'all':
+    if estimator == 'LassoLars' or 'all':
         from sklearn import linear_model
         model = linear_model.LassoLars(alpha=.1)
         model.fit(X_train, y_train.values.ravel())
         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
         rfecv.fit(X_train, y_train.values.ravel())
-        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'Bayesian Ridge' or 'all':
+    if estimator == 'BayesianRidge' or 'all':
         from sklearn import linear_model
         model = linear_model.BayesianRidge()
         model.fit(X_train, y_train.values.ravel())
         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
         rfecv.fit(X_train, y_train.values.ravel())
-        varsel = varsel.append(pd.DataFrame(rfecv.support_, columns=[model]).T)
+        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+        varsel = varsel.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
     for temp in range(varsel.shape[0]):
         output = output.append(autoPLS(X_train.iloc[:,varsel.iloc[temp,:].values], y_train,
                                       X_test.iloc[:,varsel.iloc[temp,:].values], y_test,
                                       max_components=max_components, cv=10, plot='off'),
                                ignore_index=True)
-
-    output = output.sort_values(by=['RMSECV'])
+    output = info.join(output).sort_values(by=['RMSECV'])
     varsel = varsel.iloc[output.index.values, :]
 
     if plot == 'on':
@@ -498,6 +504,6 @@ def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv
         select = fig.add_subplot(1,1,1) 
         select.plot(X_train.T)
         select.vlines(np.arange(0, varsel.shape[1])[varsel.iloc[0].values], ymin=min(X_train.min(0)), ymax=max(X_train.max(0)),linestyles='dotted', color='r')
-        autoPLS(X_train.iloc[:,varsel.iloc[0,:].values], y_train, X_test.iloc[:,varsel.iloc[0,:].values], y_test, max_components=max_components, cv=cv, plot='on')
+        autoPLS(X_train.iloc[:,varsel.iloc[0,:].values], y_train, X_test.iloc[:,varsel.iloc[0,:].values], y_test, max_components=min(max_components, X_train.iloc[:,varsel.iloc[0,:].values].shape[1]), cv=cv, plot='on')
 
     return [output, varsel]
