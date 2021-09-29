@@ -425,184 +425,269 @@ def autosgPLS(X_train, y_train, X_test, y_test, max_components, cv=10, plot='off
 
     return output
 
-def varsel(X_train, y_train, X_test, y_test, max_components, estimator='all', cv=10, plot='off'):
-    "[output, vs] = varsel(X_train, y_train, X_test, y_test, n_components, estimator='all', cv=10, plot='off')"
-
+def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=10, plot='off'):
+    "[output, vs] = varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=10, plot='off')"
     import pandas as pd
-    from sklearn.feature_selection import RFECV
+    import numpy as np
 
-    info = pd.DataFrame()
-    vs = pd.DataFrame()
     output = pd.DataFrame()
+    vs = pd.DataFrame()
 
-    if estimator == 'PLSRegression' or estimator == 'all':
+    if info == 'PLSReg' or info == 'all':
         from sklearn.cross_decomposition import PLSRegression
         for n_components in range(1, max_components+1):
             model = PLSRegression(n_components=n_components)
-            rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.05), min_features_to_select=n_components)
-            rfecv.fit(X_train, y_train.values.ravel())
-            info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-            vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+            model.fit(X_train, y_train)
+            vector = pd.DataFrame(abs(model.coef_)).sort_values(0, ascending=False).index
+            temp_output = pd.DataFrame()
+            temp_vs = pd.DataFrame()
+            for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
+                var = vector[0:window]
+                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp_output = temp_output.append(temp, ignore_index=True)
+                temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
+            output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
+            vs = vs.append(temp_vs.iloc[np.argmin(temp_output['RMSECV'])])
 
-    if estimator == 'Ridge' or estimator == 'all':
-        from sklearn.linear_model import RidgeCV
-        model = RidgeCV()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+    if info == 'Loadings' or info == 'all':
+        from sklearn.cross_decomposition import PLSRegression
+        for n_components in range(1, max_components+1):
+            model = PLSRegression(n_components=n_components)
+            model.fit(X_train, y_train)
+            vector = pd.DataFrame(abs(model.x_loadings_.T).sum(0)).sort_values(0, ascending=False).index
+            temp_output = pd.DataFrame()
+            temp_vs = pd.DataFrame()
+            for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
+                var = vector[0:window]
+                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp_output = temp_output.append(temp, ignore_index=True)
+                temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
+            output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
+            vs = vs.append(temp_vs.iloc[np.argmin(temp_output['RMSECV'])])
 
-    if estimator == 'Lasso' or estimator == 'all': #Rever
-        from sklearn.linear_model import LassoCV
-        model = LassoCV()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+    if info == 'Weigths' or info == 'all':
+        from sklearn.cross_decomposition import PLSRegression
+        for n_components in range(1, max_components+1):
+            model = PLSRegression(n_components=n_components)
+            model.fit(X_train, y_train)
+            vector = pd.DataFrame(abs(model.x_weights_.T).sum(0)).sort_values(0, ascending=False).index
+            temp_output = pd.DataFrame()
+            temp_vs = pd.DataFrame()
+            for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
+                var = vector[0:window]
+                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp_output = temp_output.append(temp, ignore_index=True)
+                temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
+            output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
+            vs = vs.append(temp_vs.iloc[np.argmin(temp_output['RMSECV'])])
 
-    if estimator == 'ElasticNetCV' or estimator == 'all': #Rever
-        from sklearn.linear_model import ElasticNetCV
-        model = ElasticNetCV()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+    if info == 'std' or info == 'all':
+        from sklearn.cross_decomposition import PLSRegression
+        for n_components in range(1, max_components+1):
+            model = PLSRegression(n_components=n_components)
+            model.fit(X_train, y_train)
+            vector = pd.DataFrame(abs(model.x_std_)).sort_values(0, ascending=False).index
+            temp_output = pd.DataFrame()
+            temp_vs = pd.DataFrame()
+            for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
+                var = vector[0:window]
+                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp_output = temp_output.append(temp, ignore_index=True)
+                temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
+            output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
+            vs = vs.append(temp_vs.iloc[np.argmin(temp_output['RMSECV'])])
 
-    if estimator == 'LassoLars' or estimator == 'all':
-        from sklearn.linear_model import LassoLars
-        model = LassoLars()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+    if info == 'SQR' or info == 'all':
+        from sklearn.cross_decomposition import PLSRegression
+        for n_components in range(1, max_components+1):
+            model = PLSRegression(n_components=n_components)
+            model.fit(X_train, y_train)
+            res = X_train - model.inverse_transform(model.x_scores_)
+            vector = pd.DataFrame(1/abs((res*res).sum(0))).sort_values(0, ascending=True).index
+            temp_output = pd.DataFrame()
+            temp_vs = pd.DataFrame()
+            for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
+                var = vector[0:window]
+                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp_output = temp_output.append(temp, ignore_index=True)
+                temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
+            output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
+            vs = vs.append(temp_vs.iloc[np.argmin(temp_output['RMSECV'])])
 
-    if estimator == 'OrthogonalMatchingPursuit' or estimator == 'all':
-        from sklearn.linear_model import OrthogonalMatchingPursuit
-        model = OrthogonalMatchingPursuit()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+    if info == 'LinReg' or info == 'all':
+        from sklearn.linear_model import LinearRegression
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        vector = pd.DataFrame(abs(model.coef_)).sort_values(0, ascending=False).index
+        temp_output = pd.DataFrame()
+        temp_vs = pd.DataFrame()
+        for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
+            var = vector[0:window]
+            temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+            temp_output = temp_output.append(temp, ignore_index=True)
+            temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
+        output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
+        vs = vs.append(temp_vs.iloc[np.argmin(temp_output['RMSECV'])])
 
-    if estimator == 'BayesianRidge' or estimator == 'all':
-        from sklearn.linear_model import BayesianRidge
-        model = BayesianRidge()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'Ridge' or estimator == 'all':
+#         from sklearn.linear_model import RidgeCV
+#         model = RidgeCV()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'ARDRegression' or estimator == 'all':
-        from sklearn.linear_model import ARDRegression
-        model = ARDRegression()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'Lasso' or estimator == 'all': #Rever
+#         from sklearn.linear_model import LassoCV
+#         model = LassoCV()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'GammaRegressor' or estimator == 'all': #Rever
-        from sklearn.linear_model import GammaRegressor
-        model = GammaRegressor()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'ElasticNetCV' or estimator == 'all': #Rever
+#         from sklearn.linear_model import ElasticNetCV
+#         model = ElasticNetCV()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'SGDRegressor' or estimator == 'all': #Rever
-        from sklearn.linear_model import SGDRegressor
-        model = SGDRegressor()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'LassoLars' or estimator == 'all':
+#         from sklearn.linear_model import LassoLars
+#         model = LassoLars()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'Perceptron' or estimator == 'all':  #Rever
-        from sklearn.linear_model import Perceptron
-        model = Perceptron()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'OrthogonalMatchingPursuit' or estimator == 'all':
+#         from sklearn.linear_model import OrthogonalMatchingPursuit
+#         model = OrthogonalMatchingPursuit()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'PassiveAggressiveRegressor' or estimator == 'all':
-        from sklearn.linear_model import PassiveAggressiveRegressor
-        model = PassiveAggressiveRegressor()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'BayesianRidge' or estimator == 'all':
+#         from sklearn.linear_model import BayesianRidge
+#         model = BayesianRidge()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'RANSACRegressor' or estimator == 'all': #Rever
-        from sklearn.linear_model import RANSACRegressor
-        model = RANSACRegressor()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'ARDRegression' or estimator == 'all':
+#         from sklearn.linear_model import ARDRegression
+#         model = ARDRegression()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'HuberRegressor' or estimator == 'all':
-        from sklearn.linear_model import HuberRegressor
-        model = HuberRegressor()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'GammaRegressor' or estimator == 'all': #Rever
+#         from sklearn.linear_model import GammaRegressor
+#         model = GammaRegressor()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'KernelRidge' or estimator == 'all': #Rever
-        from sklearn.kernel_ridge import KernelRidge
-        model = KernelRidge()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'SGDRegressor' or estimator == 'all': #Rever
+#         from sklearn.linear_model import SGDRegressor
+#         model = SGDRegressor()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'LinearSVR' or estimator == 'all': #Rever
-        from sklearn.svm import LinearSVR
-        model = LinearSVR()
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'Perceptron' or estimator == 'all':  #Rever
+#         from sklearn.linear_model import Perceptron
+#         model = Perceptron()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    if estimator == 'RandomForestRegressor' or estimator == 'all':
-        from sklearn.ensemble import RandomForestRegressor
-        model = RandomForestRegressor(max_depth=X_train.shape[1]*0.5)
-        model.fit(X_train, y_train.values.ravel())
-        rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv, step=int(X_train.shape[1]*0.1))
-        rfecv.fit(X_train, y_train.values.ravel())
-        info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
-        vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+#     if estimator == 'PassiveAggressiveRegressor' or estimator == 'all':
+#         from sklearn.linear_model import PassiveAggressiveRegressor
+#         model = PassiveAggressiveRegressor()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
 
-    for temp in range(vs.shape[0]):
-        output = output.append(autoPLS(X_train.iloc[:,vs.iloc[temp,:].values], y_train,
-                                      X_test.iloc[:,vs.iloc[temp,:].values], y_test,
-                                      max_components=max_components, cv=10, plot='off'),
-                               ignore_index=True)
-    output = info.join(output).sort_values(by=['RMSECV'])
-    vs = vs.iloc[output.index.values, :]
+#     if estimator == 'RANSACRegressor' or estimator == 'all': #Rever
+#         from sklearn.linear_model import RANSACRegressor
+#         model = RANSACRegressor()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+
+#     if estimator == 'HuberRegressor' or estimator == 'all':
+#         from sklearn.linear_model import HuberRegressor
+#         model = HuberRegressor()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+
+#     if estimator == 'KernelRidge' or estimator == 'all': #Rever
+#         from sklearn.kernel_ridge import KernelRidge
+#         model = KernelRidge()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+
+#     if estimator == 'LinearSVR' or estimator == 'all': #Rever
+#         from sklearn.svm import LinearSVR
+#         model = LinearSVR()
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+
+#     if estimator == 'RandomForestRegressor' or estimator == 'all':
+#         from sklearn.ensemble import RandomForestRegressor
+#         model = RandomForestRegressor(max_depth=X_train.shape[1]*0.5)
+#         model.fit(X_train, y_train.values.ravel())
+#         rfecv = RFECV(estimator=model, scoring='neg_root_mean_squared_error', cv=cv)
+#         rfecv.fit(X_train, y_train.values.ravel())
+#         info = info.append(pd.DataFrame({'InfoVec': [model], 'nVars': [rfecv.n_features_]}), ignore_index=True)
+#         vs = vs.append(pd.DataFrame(rfecv.support_).T, ignore_index=True)
+
+#     for temp in range(vs.shape[0]):
+#         output = output.append(autoPLS(X_train.iloc[:,vs.iloc[temp,:].values], y_train,
+#                                       X_test.iloc[:,vs.iloc[temp,:].values], y_test,
+#                                       max_components=max_components, cv=10, plot='off'),
+#                                ignore_index=True)
+#     output = info.join(output).sort_values(by=['RMSECV'])
+#     vs = vs.iloc[output.index.values, :]
 
     if plot == 'on':
+        best_vs = vs.iloc[np.argmin(output['RMSECV'])].dropna()
         import matplotlib.pyplot as plt
-        import numpy as np
         fig = plt.figure(figsize = (6,6), dpi=300)
         select = fig.add_subplot(1,1,1) 
         select.plot(X_train.T)
-        select.vlines(np.arange(0, vs.shape[1])[vs.iloc[0].values], ymin=min(X_train.min(0)), ymax=max(X_train.max(0)),linestyles='dotted', color='r')
-        autoPLS(X_train.iloc[:,vs.iloc[0,:].values], y_train, X_test.iloc[:,vs.iloc[0,:].values], y_test, max_components=min(max_components, X_train.iloc[:,vs.iloc[0,:].values].shape[1]), cv=cv, plot='on')
+        select.vlines(best_vs, ymin=min(X_train.min(0)), ymax=max(X_train.max(0)),linestyles='dotted', color='r')
+        autoPLS(X_train.iloc[:,best_vs], y_train, X_test.iloc[:,best_vs], y_test, max_components=min(max_components, X_train.iloc[:,best_vs].shape[1]), cv=cv, plot='on')
 
     return [output, vs]
