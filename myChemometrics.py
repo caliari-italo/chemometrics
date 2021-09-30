@@ -425,8 +425,8 @@ def autosgPLS(X_train, y_train, X_test, y_test, max_components, cv=10, plot='off
 
     return output
 
-def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=10, plot='off'):
-    "[output, vs] = varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=10, plot='off')"
+def varsel(X_train, y_train, X_test, y_test, info='all', max_components=10, cv=10, plot='off'):
+    "[output, vs] = varsel(X_train, y_train, X_test, y_test, info='all', max_components=10, cv=10, plot='off')"
     import pandas as pd
     import numpy as np
 
@@ -443,7 +443,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
             temp_vs = pd.DataFrame()
             for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
                 var = vector[0:window]
-                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp = pd.concat([pd.DataFrame({'InfoVector': ['PLSReg n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
                 temp_output = temp_output.append(temp, ignore_index=True)
                 temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
             output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
@@ -451,7 +451,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
 
     if info == 'Loadings' or info == 'all':
         from sklearn.cross_decomposition import PLSRegression
-        for n_components in range(1, max_components+1):
+        for n_components in range(1, 4):
             model = PLSRegression(n_components=n_components)
             model.fit(X_train, y_train)
             vector = pd.DataFrame(abs(model.x_loadings_.T).sum(0)).sort_values(0, ascending=False).index
@@ -459,7 +459,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
             temp_vs = pd.DataFrame()
             for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
                 var = vector[0:window]
-                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp = pd.concat([pd.DataFrame({'InfoVector': ['Loadings n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
                 temp_output = temp_output.append(temp, ignore_index=True)
                 temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
             output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
@@ -467,7 +467,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
 
     if info == 'Weigths' or info == 'all':
         from sklearn.cross_decomposition import PLSRegression
-        for n_components in range(1, max_components+1):
+        for n_components in range(1, 4):
             model = PLSRegression(n_components=n_components)
             model.fit(X_train, y_train)
             vector = pd.DataFrame(abs(model.x_weights_.T).sum(0)).sort_values(0, ascending=False).index
@@ -475,7 +475,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
             temp_vs = pd.DataFrame()
             for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
                 var = vector[0:window]
-                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp = pd.concat([pd.DataFrame({'InfoVector': ['Weigths n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
                 temp_output = temp_output.append(temp, ignore_index=True)
                 temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
             output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
@@ -491,7 +491,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
             temp_vs = pd.DataFrame()
             for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
                 var = vector[0:window]
-                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp = pd.concat([pd.DataFrame({'InfoVector': ['std n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
                 temp_output = temp_output.append(temp, ignore_index=True)
                 temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
             output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
@@ -508,7 +508,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
             temp_vs = pd.DataFrame()
             for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
                 var = vector[0:window]
-                temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+                temp = pd.concat([pd.DataFrame({'InfoVector': ['SQR n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
                 temp_output = temp_output.append(temp, ignore_index=True)
                 temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
             output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
@@ -523,7 +523,7 @@ def varsel(X_train, y_train, X_test, y_test, info='all', max_components=15, cv=1
         temp_vs = pd.DataFrame()
         for window in range(max(25, int(len(vector)*.05)), len(vector)+1):
             var = vector[0:window]
-            temp = pd.concat([pd.DataFrame({'InfoVector': [info + ' n_components=' + str(n_components)], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
+            temp = pd.concat([pd.DataFrame({'InfoVector': ['LinReg'], 'nVars': [len(var)]}).reset_index(drop=True), (autoPLS(X_train[var], y_train, X_test[var], y_test, max_components=max_components, cv=cv, plot='off')).reset_index(drop=True)], axis=1)
             temp_output = temp_output.append(temp, ignore_index=True)
             temp_vs = temp_vs.append(pd.DataFrame(var).T, ignore_index=True)
         output = output.append(temp_output.iloc[np.argmin(temp_output['RMSECV'])])
