@@ -34,3 +34,75 @@ plt.plot(vector)
 [output6, vs6] = varsel(X_train, y_train, X_test, y_test, info='LinReg', step=0.05, max_components=10, cv=10, plot='on')
 [output7, vs7] = varsel(X_train, y_train, X_test, y_test, info='all', step=0.05, max_components=10, cv=10, plot='on')
 [output8, vs8] = varsel(X_train, y_train, X_test, y_test, info='all', step=0.05, max_components=10, cv=10, plot='on')
+
+
+
+print('A base de dados apresenta {} registros (imóveis) e {} variáveis'.format(dados.shape[0], dados.shape[1]))
+
+index = ['Linha' + str(i) for i in range(5)]
+columns = ['Coluna' + str(i) for i in range(3)]
+df2 = pd.DataFrame(data = data, index = index, columns = columns)
+
+residencial = ['Quitinete', 
+                'Casa',
+                'Apartamento',
+                'Casa de Condomínio',
+                'Casa de Vila']
+
+selecao = dados['Tipo'].isin(residencial)
+
+dados_residencial = dados[selecao]
+
+list('321')
+
+df = pd.DataFrame(data, list('321'), list('ZYX'))
+
+df.sort_values(by = ['X','Y'], inplace = True)
+
+#Selecione somente os imóveis classificados com tipo 'Apartamento'.
+selecao = dados ['Tipo'] == 'Apartamento'
+selecao
+
+data = [(1, 2, 3, 4),
+        (5, 6, 7, 8),
+        (8, 10, 11, 12),
+        (13, 14, 15, 16)]
+df = pd.DataFrame(data, 'l1 l2 l3 l4'.split(), 'c1 c2 c3 c4'.split())
+
+dados.fillna(0, inplace = True)
+
+dados = dados.fillna({'Condominio': 0, 'IPTU': 0})
+
+sexo = alunos.groupby('Sexo')
+
+grupo_bairro['Valor'].describe().round(2)
+
+dados.boxplot(['Valor'])
+
+
+Q1 = valor.quantile(.25)
+Q3 = valor.quantile(.75)
+IIQ = Q3 - Q1
+limite_inferior = Q1 - 1.5 * IIQ
+limite_superior = Q3 + 1.5 * IIQ
+
+
+dados.hist(['Valor'])
+dados_new.hist(['Valor'])
+
+
+
+dados_new = pd.DataFrame()
+for tipo in grupo_tipo.groups.keys():
+    eh_tipo = dados['Tipo'] == tipo
+    eh_dentro_limite = (dados['Valor'] >= limite_inferior[tipo]) & (dados['Valor'] <= limite_superior[tipo])
+    selecao = eh_tipo & eh_dentro_limite
+    dados_selecao = dados[selecao]
+    dados_new = pd.concat([dados_new, dados_selecao])
+    
+dist_freq_qualitativas.rename(index = {0: 'Masculino', 1: 'Feminino'}, inplace = True)   
+dist_freq_qualitativas.rename(index = {0: 'Masculino', 1: 'Feminino'}, inplace = True)
+dist_freq_qualitativas.rename_axis('Sexo', axis = 'columns', inplace = True)
+    
+    
+    
